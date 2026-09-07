@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>سجل متابعة العلوم - حذف صف أو عمود - v19</title>
+<title>سجل متابعة العلوم - لوحة التحليل - v21</title>
 <style>
   :root{
     --navy:#0b1526; --navy2:#0f1e35;
@@ -53,6 +53,7 @@
   .action-bar{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:12px 0 16px;}
   .abtn{border:none;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:bold;cursor:pointer;color:#fff;display:flex;align-items:center;gap:6px;}
   .abtn.b-print{background:#2f6fed;}
+  .abtn.b-analysis{background:linear-gradient(135deg,#0f766e,#0891b2);}
   .abtn.b-excel{background:#1c8a52;}
   .abtn.b-import{background:#5b4fd6;}
   .abtn.b-keypad{background:#d97a1f;}
@@ -61,6 +62,8 @@
   .abtn.b-add{background:#00897b;}
   .abtn.b-sort{background:#6d4c41;}
   .abtn.b-columns{background:#7b1fa2;}
+  .abtn.b-saveimg{background:#8b5cf6;}
+  .abtn.b-report{background:linear-gradient(135deg,#0b5ed7,#2563eb);}
   .font-controls{display:flex;gap:6px;align-items:center;background:#16233a;border:1px solid #33456a;border-radius:12px;padding:5px;}
   .font-controls .font-level{min-width:66px;background:#fff;color:var(--navy);font-weight:800;}
   .abtn:active{transform:scale(.97);}
@@ -147,6 +150,45 @@
   .count-btn:active{transform:scale(.95);}
   .config-note{background:#f7f4fb;border:1px solid #dec9ef;border-radius:9px;padding:10px;font-size:13px;line-height:1.8;text-align:right;color:#4a345a;}
 
+
+  /* ===== لوحة التحليل الشاملة v20 ===== */
+  #analysisModal{align-items:flex-start;padding-top:16px;padding-bottom:16px;}
+  #analysisModal .analysis-modal-box{max-width:1180px;width:min(1180px,98vw);text-align:right;padding:18px;max-height:94vh;overflow:auto;}
+  .analysis-head{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:1px solid #e5e7eb;padding-bottom:12px;margin-bottom:14px;}
+  .analysis-title-wrap h2{margin:0;color:#10233e;font-size:24px;}
+  .analysis-subtitle{color:#64748b;font-size:13px;margin-top:5px;line-height:1.7;}
+  .analysis-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .analysis-controls select{padding:9px 10px;border:1px solid #cbd5e1;border-radius:9px;font-family:inherit;font-weight:700;background:#fff;}
+  .analysis-cards{display:grid;grid-template-columns:repeat(6,minmax(130px,1fr));gap:10px;margin:12px 0 16px;}
+  .analysis-card{background:linear-gradient(180deg,#fff,#f8fafc);border:1px solid #e2e8f0;border-radius:13px;padding:13px;box-shadow:0 2px 8px rgba(15,23,42,.06);min-height:88px;display:flex;flex-direction:column;justify-content:center;}
+  .analysis-card .a-val{font-size:27px;font-weight:900;color:#0f172a;line-height:1.1;}
+  .analysis-card .a-lbl{font-size:12px;font-weight:800;color:#64748b;margin-top:7px;}
+  .analysis-card.good{border-top:4px solid #15803d}.analysis-card.warn{border-top:4px solid #d97706}.analysis-card.bad{border-top:4px solid #b91c1c}.analysis-card.info{border-top:4px solid #0369a1}
+  .analysis-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:14px;}
+  .analysis-panel{background:#fff;border:1px solid #e2e8f0;border-radius:13px;padding:13px;box-shadow:0 2px 8px rgba(15,23,42,.05);}
+  .analysis-panel h3{margin:0 0 10px;color:#17324d;font-size:17px;}
+  .analysis-panel canvas{display:block;width:100%;height:245px;background:#fbfdff;border-radius:10px;}
+  .analysis-level-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+  .level-box{border-radius:11px;padding:11px;text-align:center;border:1px solid #e5e7eb;background:#f8fafc;}
+  .level-box .level-count{font-size:24px;font-weight:900}.level-box .level-name{font-weight:900;margin-top:4px}.level-box .level-pct{font-size:12px;color:#64748b;margin-top:3px;}
+  .level-excellent{border-top:4px solid #15803d}.level-vgood{border-top:4px solid #0284c7}.level-good{border-top:4px solid #ca8a04}.level-acceptable{border-top:4px solid #ea580c}.level-weak{border-top:4px solid #b91c1c}
+  .analysis-insights{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+  .insight-box{border-radius:11px;padding:12px;border:1px solid #dbe5ee;background:#f8fbfe;line-height:1.8;font-size:14px;}
+  .insight-box strong{color:#0f3557;}
+  .analysis-table-wrap{overflow:auto;border:1px solid #e5e7eb;border-radius:10px;max-height:360px;}
+  .analysis-table{width:100%;min-width:760px;border-collapse:collapse;}
+  .analysis-table th,.analysis-table td{position:static;border:1px solid #e5e7eb;padding:8px 7px;font-size:13px;text-align:center;}
+  .analysis-table th{background:#17324d;color:#fff;font-weight:900;}
+  .analysis-table td.name{text-align:right;font-weight:800;min-width:190px;}
+  .level-badge{display:inline-block;padding:4px 9px;border-radius:999px;font-weight:900;font-size:12px;white-space:nowrap;}
+  .badge-excellent{background:#dcfce7;color:#166534}.badge-vgood{background:#e0f2fe;color:#075985}.badge-good{background:#fef9c3;color:#854d0e}.badge-acceptable{background:#ffedd5;color:#9a3412}.badge-weak{background:#fee2e2;color:#991b1b}.badge-unscored{background:#e2e8f0;color:#475569}
+  .analysis-footer-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid #e5e7eb;}
+  .analysis-note{background:#fffbeb;border:1px solid #fde68a;color:#854d0e;border-radius:10px;padding:9px 11px;font-size:12px;line-height:1.7;margin:8px 0 12px;}
+  .class-compare{display:grid;grid-template-columns:repeat(5,minmax(125px,1fr));gap:8px;}
+  .class-chip{border:1px solid #dbe4ec;border-radius:10px;padding:10px;background:#f8fafc;text-align:center;}
+  .class-chip b{display:block;color:#17324d;font-size:15px;margin-bottom:5px;}.class-chip span{font-size:12px;color:#64748b;display:block;line-height:1.6;}
+  @media(max-width:850px){.analysis-cards{grid-template-columns:repeat(2,1fr)}.analysis-grid,.analysis-insights{grid-template-columns:1fr}.analysis-level-grid{grid-template-columns:repeat(2,1fr)}.class-compare{grid-template-columns:repeat(2,1fr)}}
+
   /* ===== لوحة الأرقام الافتراضية للتابلت ===== */
   /* ===== لوحة الرصد السريعة العائمة (صغيرة، بجانب الخانة) ===== */
   #numKeypad{position:fixed;width:296px;background:#16233a;border-radius:14px;padding:12px;display:none;z-index:1500;box-shadow:0 6px 22px rgba(0,0,0,.4);border:1px solid #2b3a55;}
@@ -207,6 +249,7 @@
   <div class="info-bar">
     <div class="info-item">المدرسة: <b id="infoSchool">مدرسة أبي الدرداء المتوسطة</b></div>
     <div class="info-item">المعلم: <b id="infoTeacher">أ/ علي طاهر البقاشي</b></div>
+    <div class="info-item">المدير: <b id="infoPrincipal">فوزي محمد الهلال</b></div>
     <div class="info-item">المادة: <b id="infoSubject">العلوم</b></div>
     <div class="info-item">العام الدراسي: <b id="infoYear">1448هـ</b></div>
     <div class="info-item" id="appModeStatus">الحالة: <b>محفوظ محليًا</b></div>
@@ -238,6 +281,8 @@
     <button class="abtn b-columns" id="columnsBtn">↔️ عدد الخانات</button>
     <button class="abtn b-import" id="importNamesBtn">☁️ استيراد الأسماء</button>
     <button class="abtn b-excel" id="exportExcelBtn">📊 تصدير Excel</button>
+    <button class="abtn b-analysis" id="analysisBtn">📈 تحليل النتائج</button>
+    <button class="abtn b-saveimg" id="saveTrackerImageBtn">🖼️ حفظ السجل صورة</button>
     <button class="abtn b-print" id="printBtn">🖨️ طباعة أفقية كاملة</button>
   </div>
 </header>
@@ -314,6 +359,7 @@
     <div class="settings-grid">
       <div><label>اسم المدرسة</label><input type="text" id="setSchool"></div>
       <div><label>اسم المعلم</label><input type="text" id="setTeacher"></div>
+      <div><label>اسم المدير</label><input type="text" id="setPrincipal"></div>
       <div><label>المادة</label><input type="text" id="setSubject"></div>
       <div><label>الصف</label><select id="setGrade">
         <option value="الأول المتوسط">الأول المتوسط</option>
@@ -397,6 +443,72 @@
 </div>
 
 
+
+<!-- لوحة تحليل النتائج -->
+<div class="modal-overlay" id="analysisModal">
+  <div class="modal-box analysis-modal-box">
+    <div class="analysis-head">
+      <div class="analysis-title-wrap">
+        <h2>📈 لوحة تحليل نتائج الطلاب</h2>
+        <div class="analysis-subtitle" id="analysisContext">—</div>
+      </div>
+      <div class="analysis-controls">
+        <label for="analysisScope" style="font-weight:800;">نطاق التحليل:</label>
+        <select id="analysisScope">
+          <option value="current">الفصل الحالي</option>
+          <option value="all">جميع فصول الصف الحالي</option>
+        </select>
+        <label for="analysisLevelFilter" style="font-weight:800;">عرض:</label>
+        <select id="analysisLevelFilter">
+          <option value="all">جميع المستويات</option>
+          <option value="ممتاز">ممتاز</option>
+          <option value="جيد جدًا">جيد جدًا</option>
+          <option value="جيد">جيد</option>
+          <option value="مقبول">مقبول</option>
+          <option value="ضعيف">ضعيف</option>
+          <option value="غير مرصود">غير مرصود</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="analysis-note">يعتمد التصنيف على <b>المجموع /60</b>: ممتاز 54–60، جيد جدًا 48–أقل من 54، جيد 42–أقل من 48، مقبول 30–أقل من 42، ضعيف أقل من 30. الطالب الذي لم تُرصد له أي درجة يظهر ضمن «غير مرصود» ولا يدخل في المتوسطات.</div>
+    <div class="analysis-cards" id="analysisCards"></div>
+
+    <div class="analysis-grid">
+      <div class="analysis-panel"><h3>توزيع مستويات الطلاب</h3><canvas id="analysisLevelCanvas" width="900" height="245"></canvas></div>
+      <div class="analysis-panel"><h3>متوسط الأداء حسب عناصر التقييم</h3><canvas id="analysisSectionCanvas" width="900" height="245"></canvas></div>
+      <div class="analysis-panel"><h3>أعلى الطلاب أداءً</h3><canvas id="analysisTopCanvas" width="900" height="245"></canvas></div>
+      <div class="analysis-panel"><h3>ملخص المستويات</h3><div class="analysis-level-grid" id="analysisLevelGrid"></div></div>
+    </div>
+
+    <div class="analysis-panel" id="classComparePanel" style="display:none;margin-bottom:14px;">
+      <h3>مقارنة الفصول</h3>
+      <div class="class-compare" id="classCompareGrid"></div>
+    </div>
+
+    <div class="analysis-panel" style="margin-bottom:14px;">
+      <h3>🔎 قراءة آلية للنتائج والتوصيات</h3>
+      <div class="analysis-insights" id="analysisInsights"></div>
+    </div>
+
+    <div class="analysis-panel">
+      <div style="display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+        <h3 style="margin:0;">تفاصيل الطلاب حسب المستوى</h3>
+        <span id="analysisFilteredCount" style="font-size:12px;color:#64748b;font-weight:800;"></span>
+      </div>
+      <div class="analysis-table-wrap"><table class="analysis-table"><thead><tr><th>م</th><th>اسم الطالب</th><th>الفصل</th><th>المشاركة /10</th><th>الواجبات /10</th><th>المهام /20</th><th>الاختبارات /20</th><th>المجموع /60</th><th>المستوى</th></tr></thead><tbody id="analysisStudentsBody"></tbody></table></div>
+    </div>
+
+    <div class="analysis-footer-actions">
+      <button class="abtn b-analysis" id="analysisRefreshBtn">🔄 تحديث التحليل</button>
+      <button class="abtn b-excel" id="analysisExportBtn">📥 تصدير التحليل</button>
+      <button class="abtn b-saveimg" id="analysisImageBtn">🖼️ حفظ التقرير صورة</button>
+      <button class="abtn b-print" id="analysisPrintBtn">🖨️ طباعة تقرير التحليل</button>
+      <button class="abtn" id="analysisCloseBtn" style="background:#334155;">إغلاق</button>
+    </div>
+  </div>
+</div>
+
 <!-- إضافة طالب في أي موقع -->
 <div class="modal-overlay" id="addStudentModal">
   <div class="modal-box">
@@ -475,7 +587,7 @@ function emptyStudent(){
 }
 function defaultMeta(){
   return { semester:"الفصل الدراسي الأول", year:"1448هـ", school:"مدرسة أبي الدرداء المتوسطة",
-           teacher:"أ/ علي طاهر البقاشي", subject:"العلوم", grade:"الأول المتوسط", fontScale:1, logoDataUrl:"", columns:defaultColumnConfig() };
+           teacher:"أ/ علي طاهر البقاشي", principal:"فوزي محمد الهلال", subject:"العلوم", grade:"الأول المتوسط", fontScale:1, logoDataUrl:"", columns:defaultColumnConfig() };
 }
 function normalizeArray(arr, len){
   var out = Array.isArray(arr) ? arr.slice(0, len) : [];
@@ -1194,6 +1306,249 @@ function drawChart(totals){
   });
 }
 
+
+/* ============ لوحة تحليل النتائج v20 ============ */
+var lastAnalysisData=null;
+function valueIsRecorded(v){ return !(v===null || v===undefined || String(v).trim()===""); }
+function sectionHasScore(s,kind){
+  var c=cfg(), arr, n;
+  if(kind==="p"){arr=s.p;n=c.participation;}
+  else if(kind==="h"){arr=s.h;n=c.homework;}
+  else if(kind==="t"){arr=s.t;n=c.tasks;}
+  else {arr=s.exams;n=c.exams;}
+  for(var i=0;i<n;i++) if(valueIsRecorded(arr[i])) return true;
+  return false;
+}
+function hasAnyRecordedScore(s){ return sectionHasScore(s,"p")||sectionHasScore(s,"h")||sectionHasScore(s,"t")||sectionHasScore(s,"e"); }
+function levelInfo(total){
+  total=num(total);
+  if(total>=54) return {label:"ممتاز",key:"excellent",cls:"excellent"};
+  if(total>=48) return {label:"جيد جدًا",key:"vgood",cls:"vgood"};
+  if(total>=42) return {label:"جيد",key:"good",cls:"good"};
+  if(total>=30) return {label:"مقبول",key:"acceptable",cls:"acceptable"};
+  return {label:"ضعيف",key:"weak",cls:"weak"};
+}
+function avgOf(arr){ return arr.length?arr.reduce(function(a,b){return a+b;},0)/arr.length:0; }
+function pct(n,d){ return d?Math.round((n/d)*100):0; }
+function shortText(s,n){ s=String(s||""); return s.length>n?s.slice(0,n-1)+"…":s; }
+function buildAnalysisRecords(scope){
+  var keys=scope==="all"?CLASSES:[currentClass], records=[];
+  keys.forEach(function(classKey){
+    var obj=state.classes[classKey];
+    if(!obj||!Array.isArray(obj.students)) return;
+    obj.students.forEach(function(s,idx){
+      if(!s.name || !s.name.trim()) return;
+      var recorded=hasAnyRecordedScore(s), total=studentTotal(s), lev=recorded?levelInfo(total):{label:"غير مرصود",key:"unscored",cls:"unscored"};
+      records.push({
+        name:s.name.trim(),classKey:classKey,classLabel:classDisplay(classKey),row:idx+1,student:s,recorded:recorded,
+        p:participationScore(s),h:homeworkScore(s),t:taskScore(s),e:examScore(s),total:total,level:lev,
+        pRecorded:sectionHasScore(s,"p"),hRecorded:sectionHasScore(s,"h"),tRecorded:sectionHasScore(s,"t"),eRecorded:sectionHasScore(s,"e")
+      });
+    });
+  });
+  return records;
+}
+function sectionMetric(records,key,maxScore,flag){
+  var vals=records.filter(function(r){return r[flag];}).map(function(r){return r[key];});
+  var av=avgOf(vals);
+  return {avg:av,pct:maxScore?Math.round((av/maxScore)*100):0,count:vals.length,max:maxScore};
+}
+function computeAnalysis(scope){
+  var records=buildAnalysisRecords(scope), scored=records.filter(function(r){return r.recorded;}), totals=scored.map(function(r){return r.total;});
+  var levels={"ممتاز":0,"جيد جدًا":0,"جيد":0,"مقبول":0,"ضعيف":0,"غير مرصود":0};
+  records.forEach(function(r){levels[r.level.label]=(levels[r.level.label]||0)+1;});
+  var sections={
+    p:sectionMetric(records,"p",10,"pRecorded"),
+    h:sectionMetric(records,"h",10,"hRecorded"),
+    t:sectionMetric(records,"t",20,"tRecorded"),
+    e:sectionMetric(records,"e",20,"eRecorded")
+  };
+  var classStats=[];
+  if(scope==="all"){
+    CLASSES.forEach(function(k){
+      var rr=records.filter(function(r){return r.classKey===k;}), ss=rr.filter(function(r){return r.recorded;}), tt=ss.map(function(r){return r.total;});
+      classStats.push({key:k,label:classDisplay(k),named:rr.length,scored:ss.length,avg:avgOf(tt),mastery:ss.filter(function(r){return r.total>=48;}).length});
+    });
+  }
+  var sorted=scored.slice().sort(function(a,b){return b.total-a.total;});
+  var data={scope:scope,records:records,scored:scored,levels:levels,sections:sections,classStats:classStats,
+    avg:avgOf(totals),max:totals.length?Math.max.apply(null,totals):0,min:totals.length?Math.min.apply(null,totals):0,
+    mastery:scored.filter(function(r){return r.total>=48;}).length,weak:scored.filter(function(r){return r.total<30;}).length,
+    top:sorted.slice(0,5),bottom:sorted.slice().reverse().slice(0,5)};
+  return data;
+}
+function analysisCard(value,label,kind){return '<div class="analysis-card '+(kind||'')+'"><div class="a-val">'+escapeHTML(value)+'</div><div class="a-lbl">'+escapeHTML(label)+'</div></div>';}
+function renderAnalysisCards(data){
+  var masteryPct=pct(data.mastery,data.scored.length), unscored=data.records.length-data.scored.length;
+  document.getElementById("analysisCards").innerHTML=
+    analysisCard(data.records.length,"الطلاب المسجلون","info")+
+    analysisCard(data.scored.length,"لديهم درجات","info")+
+    analysisCard(data.avg.toFixed(1),"متوسط الأداء /60",data.avg>=48?"good":data.avg<30?"bad":"warn")+
+    analysisCard(data.max?fmtScore(data.max):"—","أعلى درجة","good")+
+    analysisCard(masteryPct+"%","نسبة الإتقان (48 فأكثر)",masteryPct>=80?"good":masteryPct<50?"bad":"warn")+
+    analysisCard(unscored,"غير مرصود لهم",unscored?"warn":"good");
+}
+function renderLevelGrid(data){
+  var labels=["ممتاز","جيد جدًا","جيد","مقبول","ضعيف"], cls=["excellent","vgood","good","acceptable","weak"], denom=Math.max(1,data.scored.length), html="";
+  labels.forEach(function(l,i){html+='<div class="level-box level-'+cls[i]+'"><div class="level-count">'+data.levels[l]+'</div><div class="level-name">'+l+'</div><div class="level-pct">'+pct(data.levels[l],denom)+'% من المرصودين</div></div>';});
+  document.getElementById("analysisLevelGrid").innerHTML=html;
+}
+function setupCanvas(canvas){
+  var ctx=canvas.getContext("2d"),W=canvas.width,H=canvas.height;ctx.clearRect(0,0,W,H);ctx.font="14px Tahoma";return {ctx:ctx,W:W,H:H};
+}
+function drawAnalysisLevels(data){
+  var o=setupCanvas(document.getElementById("analysisLevelCanvas")),ctx=o.ctx,W=o.W,H=o.H;
+  var labels=["ممتاز","جيد جدًا","جيد","مقبول","ضعيف"],vals=labels.map(function(l){return data.levels[l]||0;}),colors=["#15803d","#0284c7","#ca8a04","#ea580c","#b91c1c"],mx=Math.max.apply(null,vals.concat([1])),gap=26,bw=(W-gap*(labels.length+1))/labels.length;
+  vals.forEach(function(v,i){var bh=(v/mx)*(H-75),x=gap+i*(bw+gap),y=H-42-bh;ctx.fillStyle=colors[i];ctx.fillRect(x,y,bw,bh);ctx.fillStyle="#0f172a";ctx.font="bold 16px Tahoma";ctx.textAlign="center";ctx.fillText(v,x+bw/2,y-8);ctx.font="13px Tahoma";ctx.fillText(labels[i],x+bw/2,H-15);});
+}
+function drawAnalysisSections(data){
+  var o=setupCanvas(document.getElementById("analysisSectionCanvas")),ctx=o.ctx,W=o.W,H=o.H;
+  var items=[{l:"المشاركة",m:data.sections.p,c:"#15803d"},{l:"الواجبات",m:data.sections.h,c:"#0369a1"},{l:"المهام",m:data.sections.t,c:"#d97706"},{l:"الاختبارات",m:data.sections.e,c:"#7e22ce"}],left=150,right=65,top=24,rowH=51,barMax=W-left-right;
+  items.forEach(function(it,i){var y=top+i*rowH;ctx.fillStyle="#e2e8f0";ctx.fillRect(left,y+8,barMax,22);ctx.fillStyle=it.c;ctx.fillRect(left,y+8,barMax*(it.m.pct/100),22);ctx.fillStyle="#172033";ctx.font="bold 14px Tahoma";ctx.textAlign="right";ctx.fillText(it.l,left-12,y+25);ctx.textAlign="left";ctx.fillText(it.m.pct+"%",left+barMax+10,y+25);ctx.font="11px Tahoma";ctx.fillStyle="#64748b";ctx.textAlign="right";ctx.fillText("مرصود: "+it.m.count,left-12,y+41);});
+}
+function drawAnalysisTop(data){
+  var o=setupCanvas(document.getElementById("analysisTopCanvas")),ctx=o.ctx,W=o.W,H=o.H,top=data.top,left=255,right=60,rowH=43,barMax=W-left-right;
+  if(!top.length){ctx.fillStyle="#64748b";ctx.textAlign="center";ctx.font="16px Tahoma";ctx.fillText("لا توجد درجات مرصودة بعد",W/2,H/2);return;}
+  top.forEach(function(r,i){var y=20+i*rowH;ctx.fillStyle="#e2e8f0";ctx.fillRect(left,y+5,barMax,20);ctx.fillStyle="#0f766e";ctx.fillRect(left,y+5,barMax*(r.total/60),20);ctx.fillStyle="#0f172a";ctx.font="bold 13px Tahoma";ctx.textAlign="right";ctx.fillText((i+1)+". "+shortText(r.name,24),left-12,y+20);ctx.textAlign="left";ctx.fillText(fmtScore(r.total),left+barMax+10,y+20);});
+}
+function renderClassCompare(data){
+  var panel=document.getElementById("classComparePanel"),grid=document.getElementById("classCompareGrid");
+  if(data.scope!=="all"){panel.style.display="none";grid.innerHTML="";return;}
+  panel.style.display="block";
+  grid.innerHTML=data.classStats.map(function(c){return '<div class="class-chip"><b>'+escapeHTML(c.label)+'</b><span>طلاب: '+c.named+' | مرصود: '+c.scored+'</span><span>المتوسط: '+c.avg.toFixed(1)+'/60</span><span>الإتقان: '+pct(c.mastery,c.scored)+'%</span></div>';}).join("");
+}
+function analysisInsights(data){
+  if(!data.records.length) return [{title:"لا توجد أسماء",text:"أضف أسماء الطلاب أولًا ثم أدخل الدرجات ليظهر التحليل."}];
+  if(!data.scored.length) return [{title:"لا توجد درجات مرصودة",text:"الأسماء موجودة، لكن لم تُرصد أي درجات بعد. ابدأ بإدخال الدرجات ثم حدّث التحليل."}];
+  var secs=[{n:"المشاركة",m:data.sections.p},{n:"الواجبات",m:data.sections.h},{n:"المهام الأدائية",m:data.sections.t},{n:"الاختبارات",m:data.sections.e}].filter(function(x){return x.m.count>0;});
+  secs.sort(function(a,b){return b.m.pct-a.m.pct;});
+  var out=[];
+  if(secs.length){out.push({title:"نقطة القوة",text:"أعلى متوسط نسبي في "+secs[0].n+" بنسبة "+secs[0].m.pct+"% من الدرجة المتاحة."});out.push({title:"أولوية التحسين",text:"أقل متوسط نسبي في "+secs[secs.length-1].n+" بنسبة "+secs[secs.length-1].m.pct+"%. يُنصح بتكثيف المتابعة والتدريب في هذا الجانب."});}
+  var masteryPct=pct(data.mastery,data.scored.length);
+  out.push({title:"مستوى الإتقان",text:"حقق "+data.mastery+" من أصل "+data.scored.length+" طالبًا مرصودًا مستوى 48/60 فأعلى، بنسبة "+masteryPct+"%."});
+  if(data.weak>0) out.push({title:"خطة علاجية",text:"يوجد "+data.weak+" طالب/طلاب في المستوى الضعيف. يُقترح تحديد المهارات الأقل أداءً، تدريب قصير متكرر، ثم إعادة قياس بعد كل نشاط علاجي."});
+  else out.push({title:"المتعثرون",text:"لا يوجد حاليًا طلاب في المستوى الضعيف وفق الدرجات المرصودة."});
+  var unscored=data.records.length-data.scored.length;
+  if(unscored>0) out.push({title:"اكتمال الرصد",text:"هناك "+unscored+" طالب/طلاب بلا أي درجة مرصودة، لذلك لا يدخلون في المتوسطات حتى لا تتأثر دقة التحليل."});
+  var gap=data.max-data.min;
+  if(data.scored.length>1 && gap>=25) out.push({title:"تفاوت الأداء",text:"الفارق بين أعلى وأقل درجة هو "+fmtScore(gap)+" درجة، ما يشير إلى تفاوت يستفيد من أنشطة متدرجة ودعم موجه."});
+  if(data.sections.e.count && data.sections.e.pct+10<Math.max(data.sections.p.pct,data.sections.h.pct,data.sections.t.pct)) out.push({title:"الاختبارات",text:"أداء الاختبارات أقل بوضوح من بعض أعمال الفصل. يُنصح بزيادة التدريب على أسئلة تحاكي الاختبار مع تغذية راجعة فورية."});
+  return out;
+}
+function renderInsights(data){document.getElementById("analysisInsights").innerHTML=analysisInsights(data).map(function(x){return '<div class="insight-box"><strong>'+escapeHTML(x.title)+':</strong> '+escapeHTML(x.text)+'</div>';}).join("");}
+function renderAnalysisStudents(data){
+  var filter=document.getElementById("analysisLevelFilter").value, rows=data.records.filter(function(r){return filter==="all"||r.level.label===filter;});
+  rows.sort(function(a,b){if(a.recorded!==b.recorded)return a.recorded?-1:1;return b.total-a.total;});
+  document.getElementById("analysisFilteredCount").textContent="المعروض: "+rows.length+" من "+data.records.length;
+  var body=document.getElementById("analysisStudentsBody");
+  if(!rows.length){body.innerHTML='<tr><td colspan="9" style="padding:20px;color:#64748b;">لا توجد نتائج مطابقة لهذا المستوى.</td></tr>';return;}
+  body.innerHTML=rows.map(function(r,i){var badge='badge-'+r.level.cls;return '<tr><td>'+(i+1)+'</td><td class="name">'+escapeHTML(r.name)+'</td><td>'+escapeHTML(r.classLabel)+'</td><td>'+ (r.pRecorded?fmtScore(r.p):"—") +'</td><td>'+ (r.hRecorded?fmtScore(r.h):"—") +'</td><td>'+ (r.tRecorded?fmtScore(r.t):"—") +'</td><td>'+ (r.eRecorded?fmtScore(r.e):"—") +'</td><td><b>'+ (r.recorded?fmtScore(r.total):"—") +'</b></td><td><span class="level-badge '+badge+'">'+escapeHTML(r.level.label)+'</span></td></tr>';}).join("");
+}
+function renderAnalysis(){
+  var scope=document.getElementById("analysisScope").value||"current",data=computeAnalysis(scope);lastAnalysisData=data;
+  document.getElementById("analysisContext").textContent=state.meta.school+" — "+state.meta.grade+" — "+state.meta.semester+" — "+(state.meta.year||"1448هـ")+" — "+(scope==="all"?"جميع الفصول":"الفصل "+classDisplay(currentClass));
+  renderAnalysisCards(data);renderLevelGrid(data);drawAnalysisLevels(data);drawAnalysisSections(data);drawAnalysisTop(data);renderClassCompare(data);renderInsights(data);renderAnalysisStudents(data);
+}
+function openAnalysis(){document.getElementById("analysisModal").classList.add("open");document.getElementById("analysisScope").value="current";document.getElementById("analysisLevelFilter").value="all";setTimeout(renderAnalysis,40);}
+function csvCell(v){v=String(v===null||v===undefined?"":v);return '"'+v.replace(/"/g,'""')+'"';}
+function exportAnalysis(){
+  var data=lastAnalysisData||computeAnalysis(document.getElementById("analysisScope").value||"current");
+  var rows=[["م","اسم الطالب","الفصل","المشاركة /10","الواجبات /10","المهام /20","الاختبارات /20","المجموع /60","المستوى"]];
+  data.records.forEach(function(r,i){rows.push([i+1,r.name,r.classLabel,r.pRecorded?fmtScore(r.p):"",r.hRecorded?fmtScore(r.h):"",r.tRecorded?fmtScore(r.t):"",r.eRecorded?fmtScore(r.e):"",r.recorded?fmtScore(r.total):"",r.level.label]);});
+  rows.push([]);rows.push(["ملخص","عدد الطلاب",data.records.length,"المرصود",data.scored.length,"المتوسط",data.avg.toFixed(1),"الإتقان %",pct(data.mastery,data.scored.length)]);
+  var csv=rows.map(function(r){return r.map(csvCell).join(",");}).join("\r\n"),blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="تحليل_نتائج_"+state.meta.grade+"_"+(data.scope==="all"?"جميع_الفصول":classDisplay(currentClass).replace("/","-"))+".csv";document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  showToastMsg("✓ تم تصدير ملف التحليل",false);
+}
+function printBarRows(items){return items.map(function(it){return '<div style="display:grid;grid-template-columns:95px 1fr 55px;gap:8px;align-items:center;margin:7px 0"><b>'+escapeHTML(it.label)+'</b><div style="height:14px;background:#e5e7eb;border-radius:8px;overflow:hidden"><div style="width:'+Math.max(0,Math.min(100,it.pct))+'%;height:100%;background:#1d718a"></div></div><span>'+it.pct+'%</span></div>';}).join("");}
+function analysisScopeLabel(data){return data.scope==="all"?"جميع فصول الصف الحالي":"الفصل "+classDisplay(currentClass);}
+function downloadDataURL(dataUrl,fileName){var a=document.createElement("a");a.href=dataUrl;a.download=fileName;document.body.appendChild(a);a.click();a.remove();}
+function downloadCanvasImage(canvas,fileName){try{downloadDataURL(canvas.toDataURL("image/png"),fileName);}catch(err){showToastMsg("⚠️ تعذر حفظ الصورة على هذا المتصفح",true);}}
+function openCanvasPrintWindow(canvas,title){
+  var w=window.open("","_blank");
+  if(!w){showToastMsg("⚠️ تعذر فتح نافذة الطباعة. اسمح بالنوافذ المنبثقة ثم حاول مرة أخرى",true);return;}
+  var url=canvas.toDataURL("image/png");
+  var html='<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>'+escapeHTML(title||"تقرير")+'</title><style>@page{size:A4 portrait;margin:8mm}html,body{margin:0;padding:0;background:#fff;font-family:Tahoma,Arial,sans-serif}body{display:flex;align-items:flex-start;justify-content:center}img{width:100%;max-width:190mm;display:block;margin:0 auto}.note{text-align:center;color:#475569;font-size:12px;margin:8px 0 14px}@media print{.note{display:none}}</style></head><body><div><div class="note">جاهز للطباعة والإضافة إلى ملف الإنجاز</div><img src="'+url+'" alt="report"></div></body></html>';
+  w.document.open();w.document.write(html);w.document.close();setTimeout(function(){try{w.focus();w.print();}catch(e){}},450);
+}
+function roundRectPath(ctx,x,y,w,h,r){r=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function fillRoundRect(ctx,x,y,w,h,r,fill,stroke){roundRectPath(ctx,x,y,w,h,r);if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke();}}
+function wrapCanvasLines(ctx,text,maxWidth){text=String(text||"").trim();if(!text) return [""];var words=text.split(/\s+/),lines=[],line="";for(var i=0;i<words.length;i++){var test=line?line+" "+words[i]:words[i];if(ctx.measureText(test).width<=maxWidth||!line) line=test; else {lines.push(line);line=words[i];}}if(line) lines.push(line);return lines;}
+function drawWrappedCanvasText(ctx,text,x,y,maxWidth,lineHeight,color,font,align){ctx.save();if(font) ctx.font=font;ctx.fillStyle=color||"#111";ctx.textAlign=align||"right";ctx.textBaseline="top";ctx.direction="rtl";var lines=wrapCanvasLines(ctx,text,maxWidth);for(var i=0;i<lines.length;i++) ctx.fillText(lines[i],x,y+i*lineHeight);ctx.restore();return y+lines.length*lineHeight;}
+function drawMetaChip(ctx,x,y,w,h,label,val,bg,border){fillRoundRect(ctx,x,y,w,h,18,bg||"#fff",border||"#dbe3ee");ctx.fillStyle="#64748b";ctx.font="bold 19px Tahoma";ctx.textAlign="right";ctx.fillText(label,x+w-18,y+22);ctx.fillStyle="#0f172a";ctx.font="bold 23px Tahoma";ctx.fillText(val||"—",x+w-18,y+52);}
+function drawStatCard(ctx,x,y,w,h,val,label,color){fillRoundRect(ctx,x,y,w,h,20,"#ffffff","#dbe5ee");ctx.fillStyle=color;ctx.fillRect(x+10,y+10,8,h-20);ctx.fillStyle="#0f172a";ctx.font="bold 36px Tahoma";ctx.textAlign="center";ctx.fillText(String(val),x+w/2,y+48);ctx.fillStyle="#64748b";ctx.font="bold 18px Tahoma";ctx.fillText(label,x+w/2,y+82);}
+function drawLevelMiniBox(ctx,x,y,w,h,label,count,pctValue,color){fillRoundRect(ctx,x,y,w,h,18,"#fff","#dbe5ee");ctx.fillStyle=color;ctx.fillRect(x,y,w,8);ctx.fillStyle="#0f172a";ctx.font="bold 28px Tahoma";ctx.textAlign="center";ctx.fillText(String(count),x+w/2,y+42);ctx.font="bold 19px Tahoma";ctx.fillText(label,x+w/2,y+72);ctx.fillStyle="#64748b";ctx.font="15px Tahoma";ctx.fillText(pctValue+"%",x+w/2,y+95);}
+function drawLogoOnCanvas(ctx,x,y,size){var logo=document.getElementById("schoolLogo");fillRoundRect(ctx,x,y,size,size,22,"rgba(255,255,255,.12)","rgba(255,255,255,.28)");if(logo&&logo.complete&&logo.naturalWidth){var lr=logo.naturalWidth/logo.naturalHeight,dw=size-24,dh=size-24;if(lr>1) dh=(size-24)/lr; else dw=(size-24)*lr;ctx.drawImage(logo,x+(size-dw)/2,y+(size-dh)/2,dw,dh);}else{ctx.fillStyle="#fff";ctx.font="56px Tahoma";ctx.textAlign="center";ctx.fillText("🏫",x+size/2,y+size/2+16);}}
+function createAnalysisReportCanvas(data){
+  data=data||lastAnalysisData||computeAnalysis(document.getElementById("analysisScope").value||"current");
+  var W=1600,H=2250,cv=document.createElement("canvas");cv.width=W;cv.height=H;var ctx=cv.getContext("2d",{alpha:false});ctx.fillStyle="#f3f6fb";ctx.fillRect(0,0,W,H);ctx.direction="rtl";
+  var grad=ctx.createLinearGradient(0,0,W,230);grad.addColorStop(0,"#0b1526");grad.addColorStop(1,"#16365f");fillRoundRect(ctx,45,40,W-90,215,30,grad,null);
+  drawLogoOnCanvas(ctx,W-195,72,98);
+  ctx.textAlign="center";ctx.fillStyle="#fff";ctx.font="bold 54px Tahoma";ctx.fillText("تقرير تحليل نتائج الطلاب",W/2-10,120);ctx.font="bold 22px Tahoma";ctx.fillStyle="#d9e4f2";ctx.fillText(state.meta.school+" — "+analysisScopeLabel(data),W/2-10,166);
+  ctx.font="18px Tahoma";ctx.fillStyle="#f3c969";ctx.fillText("جاهز للإضافة إلى ملف الإنجاز أو للطباعة المباشرة",W/2-10,202);
+
+  var chips=[
+    ["اسم المدرسة",state.meta.school],["اسم المعلم",state.meta.teacher],["اسم المدير",state.meta.principal||"فوزي محمد الهلال"],["المادة",state.meta.subject],
+    ["الصف",state.meta.grade],["الفصل",analysisScopeLabel(data)],["الفصل الدراسي",state.meta.semester],["العام الدراسي",state.meta.year||"1448هـ"]
+  ];
+  var chipW=350,chipH=84,gapX=18,gapY=14,startX=60,startY=285;
+  chips.forEach(function(item,i){var col=i%4,row=Math.floor(i/4),x=startX+col*(chipW+gapX),y=startY+row*(chipH+gapY);drawMetaChip(ctx,x,y,chipW,chipH,item[0],item[1],"#ffffff","#dbe3ee");});
+
+  var unscored=data.records.length-data.scored.length, masteryPct=pct(data.mastery,data.scored.length), statY=495, statW=235, statH=110, statGap=18;
+  var stats=[
+    [data.records.length,"عدد الطلاب","#0f766e"],[data.scored.length,"مرصود لهم درجات","#0369a1"],[data.avg.toFixed(1),"متوسط الأداء /60",data.avg>=48?"#15803d":data.avg<30?"#b91c1c":"#d97706"],
+    [data.max?fmtScore(data.max):"—","أعلى درجة","#15803d"],[masteryPct+"%","نسبة الإتقان","#7c3aed"],[unscored,"غير مرصود لهم",unscored?"#b45309":"#15803d"]
+  ];
+  stats.forEach(function(s,i){var x=60+i*(statW+statGap);drawStatCard(ctx,x,statY,statW,statH,s[0],s[1],s[2]);});
+
+  var levelY=635, levelW=285, levelH=116, levelGap=16; var levelLabels=["ممتاز","جيد جدًا","جيد","مقبول","ضعيف"], levelColors=["#16a34a","#0284c7","#ca8a04","#ea580c","#dc2626"];
+  for(var li=0; li<levelLabels.length; li++){var lx=60+li*(levelW+levelGap);drawLevelMiniBox(ctx,lx,levelY,levelW,levelH,levelLabels[li],data.levels[levelLabels[li]]||0,pct(data.levels[levelLabels[li]]||0,Math.max(1,data.scored.length)),levelColors[li]);}
+
+  function drawPanel(x,y,w,h,title){fillRoundRect(ctx,x,y,w,h,22,"#ffffff","#dbe5ee");ctx.fillStyle="#17324d";ctx.font="bold 24px Tahoma";ctx.textAlign="right";ctx.fillText(title,x+w-22,y+34);ctx.strokeStyle="#e2e8f0";ctx.beginPath();ctx.moveTo(x+20,y+52);ctx.lineTo(x+w-20,y+52);ctx.stroke();}
+  drawPanel(60,790,700,360,"توزيع مستويات الطلاب");
+  drawPanel(840,790,700,360,"متوسط الأداء حسب عناصر التقييم");
+  drawPanel(60,1180,700,595,"أبرز المؤشرات والتوصيات");
+  drawPanel(840,1180,700,595,"أعلى الطلاب أداءً");
+
+  (function(){var x=100,y=860,w=620,h=245,labels=levelLabels,vals=labels.map(function(l){return data.levels[l]||0;}),mx=Math.max.apply(null,vals.concat([1])),gap=32,bw=(w-gap*(labels.length+1))/labels.length;for(var i=0;i<labels.length;i++){var bh=(vals[i]/mx)*(h-58),bx=x+gap+i*(bw+gap),by=y+h-bh-32;ctx.fillStyle="#e8eef5";ctx.fillRect(bx,y+16,bw,h-48);ctx.fillStyle=levelColors[i];ctx.fillRect(bx,by,bw,bh);ctx.fillStyle="#0f172a";ctx.font="bold 18px Tahoma";ctx.textAlign="center";ctx.fillText(String(vals[i]),bx+bw/2,by-10);ctx.font="15px Tahoma";ctx.fillStyle="#334155";ctx.fillText(labels[i],bx+bw/2,y+h-8);}})();
+  (function(){var items=[{l:"المشاركة",m:data.sections.p,c:"#16a34a"},{l:"الواجبات",m:data.sections.h,c:"#2563eb"},{l:"المهام الأدائية",m:data.sections.t,c:"#f59e0b"},{l:"الاختبارات",m:data.sections.e,c:"#9333ea"}],x=875,y=865,rowH=63;for(var i=0;i<items.length;i++){var it=items[i],yy=y+i*rowH;fillRoundRect(ctx,x+135,yy,410,26,13,"#e8eef5",null);fillRoundRect(ctx,x+135,yy,410*(it.m.pct/100),26,13,it.c,null);ctx.fillStyle="#17324d";ctx.font="bold 20px Tahoma";ctx.textAlign="right";ctx.fillText(it.l,x+110,yy+20);ctx.textAlign="left";ctx.fillText(it.m.pct+"%",x+565,yy+20);ctx.font="14px Tahoma";ctx.fillStyle="#64748b";ctx.fillText("مرصود: "+it.m.count,x+565,yy+45);}})();
+
+  (function(){var insights=analysisInsights(data);var bx=85, by=1245, bw=650, yy=by;insights.forEach(function(ins,idx){fillRoundRect(ctx,bx,yy,bw,112,18,idx%2?"#f8fafc":"#fefbf5","#e2e8f0");ctx.fillStyle="#0f3557";ctx.font="bold 21px Tahoma";ctx.textAlign="right";ctx.fillText((idx+1)+". "+ins.title,bx+bw-18,yy+24);yy=drawWrappedCanvasText(ctx,ins.text,bx+bw-18,yy+46,bw-36,24,"#334155","18px Tahoma","right")+20;});})();
+
+  (function(){var x=865,y=1245,w=650,rowH=56;var cols=[55,275,110,100,110];var xs=[x+w];for(var i=0;i<cols.length;i++) xs.push(xs[i]-cols[i]); var headers=["م","اسم الطالب","الفصل","المجموع","المستوى"]; for(var c=0;c<cols.length;c++){ctx.fillStyle="#17324d";ctx.fillRect(xs[c+1],y,cols[c],44);ctx.fillStyle="#fff";ctx.font="bold 18px Tahoma";ctx.textAlign="center";ctx.fillText(headers[c],xs[c+1]+cols[c]/2,y+27);} var rows=data.top.length?data.top:[{name:"لا توجد درجات مرصودة بعد",classLabel:"—",total:"—",level:{label:"—"}}]; rows.slice(0,5).forEach(function(r,ri){var yy=y+44+ri*rowH; var fill=ri%2?"#f8fafc":"#ffffff"; for(var ci=0;ci<cols.length;ci++){ctx.fillStyle=fill;ctx.fillRect(xs[ci+1],yy,cols[ci],rowH);ctx.strokeStyle="#e2e8f0";ctx.strokeRect(xs[ci+1],yy,cols[ci],rowH); ctx.fillStyle="#0f172a"; ctx.font=(ci===1?"bold 17px Tahoma":"16px Tahoma"); ctx.textAlign="center"; var val=[ri+1,r.name||"",r.classLabel||"",r.total==="—"?"—":fmtScore(r.total),r.level&&r.level.label?r.level.label:"—"][ci]; if(ci===1){ctx.textAlign="right";ctx.fillText(fitCanvasText(ctx,String(val),cols[ci]-18,17,12,ci===1),xs[ci+1]+cols[ci]-10,yy+34);} else {ctx.fillText(String(val),xs[ci+1]+cols[ci]/2,yy+34);} }}); ctx.fillStyle="#64748b"; ctx.font="14px Tahoma"; ctx.textAlign="right"; ctx.fillText("يعرض التقرير أعلى خمسة طلاب حسب مجموع /60",x+w-4, y+44+Math.max(1,rows.slice(0,5).length)*rowH+28);})();
+
+  fillRoundRect(ctx,60,1805,1480,365,24,"#ffffff","#dbe5ee");
+  ctx.fillStyle="#17324d"; ctx.font="bold 24px Tahoma"; ctx.textAlign="right"; ctx.fillText("خلاصة التقرير",1510,1844);
+  ctx.strokeStyle="#e2e8f0"; ctx.beginPath(); ctx.moveTo(80,1862); ctx.lineTo(1520,1862); ctx.stroke();
+  var footerText1='تم إنشاء هذا التقرير آليًا من بيانات سجل متابعة العلوم، ويمكن استخدامه كتوثيق رسمي ضمن ملف الإنجاز أو طباعته مباشرة بصيغة مرتبة وملونة.';
+  var footerText2='البيانات الأساسية: المدرسة '+state.meta.school+'، المعلم '+state.meta.teacher+'، المدير '+(state.meta.principal||'فوزي محمد الهلال')+'، المادة '+state.meta.subject+'، الصف '+state.meta.grade+'، '+state.meta.semester+'، العام '+(state.meta.year||'1448هـ')+'، '+analysisScopeLabel(data)+'.';
+  drawWrappedCanvasText(ctx,footerText1,1510,1888,1410,30,'#334155','20px Tahoma','right');
+  drawWrappedCanvasText(ctx,footerText2,1510,1960,1410,30,'#334155','20px Tahoma','right');
+  ctx.fillStyle='#0f766e'; ctx.font='bold 18px Tahoma'; ctx.textAlign='center'; ctx.fillText('سجل متابعة العلوم — تقرير تحليل النتائج',W/2,2140);
+  ctx.fillStyle='#64748b'; ctx.font='15px Tahoma'; ctx.fillText('صالح للحفظ كصورة أو للطباعة أو للإدراج داخل ملف الإنجاز',W/2,2170);
+  return cv;
+}
+function saveAnalysisReportImage(){var data=lastAnalysisData||computeAnalysis(document.getElementById("analysisScope").value||"current");var cv=createAnalysisReportCanvas(data);downloadCanvasImage(cv,"تقرير_تحليل_النتائج_"+(data.scope==="all"?"جميع_الفصول":classDisplay(currentClass).replace("/","-"))+".png");showToastMsg("✓ تم حفظ تقرير التحليل كصورة",false);}
+function printAnalysisReport(){var data=lastAnalysisData||computeAnalysis(document.getElementById("analysisScope").value||"current");var cv=createAnalysisReportCanvas(data);openCanvasPrintWindow(cv,"تقرير تحليل النتائج");}
+function createTrackerPortfolioCanvas(){
+  var c=cfg(), all=state.classes[currentClass].students, students=all.filter(rowHasPrintableData); var displayStudents=students.length?students.slice():(function(){var a=[];for(var i=0;i<40;i++) a.push(emptyStudent());return a;})();
+  var count=displayStudents.length, pageCount=count>25?2:1, pageSize=Math.ceil(count/pageCount), portraits=[]; for(var p=0;p<pageCount;p++){var start=p*pageSize, end=Math.min(start+pageSize,count), chunk=displayStudents.slice(start,end); portraits.push(rotateLandscapeCanvasToPortrait(buildLandscapeCanvasPage(chunk,start,p,pageCount,c)));}
+  var topH=150,gap=28,W=portraits[0].width+60,H=topH+portraits.reduce(function(a,b){return a+b.height;},0)+gap*(portraits.length-1)+45,cv=document.createElement("canvas"); cv.width=W; cv.height=H; var ctx=cv.getContext("2d",{alpha:false}); ctx.fillStyle="#f3f6fb"; ctx.fillRect(0,0,W,H); ctx.direction="rtl";
+  var grad=ctx.createLinearGradient(0,0,W,130); grad.addColorStop(0,"#0b1526"); grad.addColorStop(1,"#17406d"); fillRoundRect(ctx,20,18,W-40,108,24,grad,null); drawLogoOnCanvas(ctx,W-128,32,72);
+  ctx.fillStyle="#fff"; ctx.textAlign="center"; ctx.font="bold 34px Tahoma"; ctx.fillText("سجل متابعة مادة العلوم",W/2,62); ctx.font="18px Tahoma"; ctx.fillStyle="#dbe7f4"; ctx.fillText(state.meta.school+" — المعلم: "+state.meta.teacher+" — المدير: "+(state.meta.principal||"فوزي محمد الهلال"),W/2,90); ctx.font="16px Tahoma"; ctx.fillStyle="#f3c969"; ctx.fillText(state.meta.grade+" — الفصل "+classDisplay(currentClass)+" — "+state.meta.semester+" — "+(state.meta.year||"1448هـ"),W/2,112);
+  var yy=topH; portraits.forEach(function(pcv,idx){fillRoundRect(ctx,24,yy-4,W-48,pcv.height+8,18,"#ffffff","#dbe5ee"); ctx.drawImage(pcv,(W-pcv.width)/2,yy); ctx.fillStyle="#64748b"; ctx.font="15px Tahoma"; ctx.textAlign="center"; ctx.fillText("صفحة السجل " +(idx+1)+" من "+portraits.length, W/2, yy+pcv.height+18); yy += pcv.height + gap;});
+  return cv;
+}
+function saveTrackerImage(){var cv=createTrackerPortfolioCanvas();downloadCanvasImage(cv,"سجل_متابعة_العلوم_"+state.meta.grade.replace(/\s+/g,"_")+"_"+classDisplay(currentClass).replace("/","-")+".png");showToastMsg("✓ تم حفظ سجل المتابعة كصورة",false);}
+document.getElementById("analysisBtn").onclick=openAnalysis;
+document.getElementById("analysisCloseBtn").onclick=function(){document.getElementById("analysisModal").classList.remove("open");};
+document.getElementById("analysisRefreshBtn").onclick=renderAnalysis;
+document.getElementById("analysisScope").onchange=function(){document.getElementById("analysisLevelFilter").value="all";renderAnalysis();};
+document.getElementById("analysisLevelFilter").onchange=function(){if(!lastAnalysisData)renderAnalysis();else renderAnalysisStudents(lastAnalysisData);};
+document.getElementById("analysisExportBtn").onclick=exportAnalysis;
+document.getElementById("analysisImageBtn").onclick=saveAnalysisReportImage;
+document.getElementById("analysisPrintBtn").onclick=printAnalysisReport;
+
 /* ============ التعبئة السريعة ============ */
 var QUICK_OPTIONS = [];
 function buildQuickSelect(){
@@ -1635,7 +1990,7 @@ function buildLandscapeCanvasPage(chunk,startIndex,pageIndex,pageCount,c){
   canvasFont(ctx,30,true);
   ctx.fillText(document.getElementById("mainTitle").textContent,LW/2,30);
   canvasFont(ctx,18,true);
-  var meta=state.meta.school+" · "+state.meta.teacher+" · المادة: "+state.meta.subject+" · الصف: "+state.meta.grade+" · الفصل: "+classDisplay(currentClass)+" · "+state.meta.semester+" "+(state.meta.year||"");
+  var meta=state.meta.school+" · المعلم: "+state.meta.teacher+" · المدير: "+(state.meta.principal||"فوزي محمد الهلال")+" · المادة: "+state.meta.subject+" · الصف: "+state.meta.grade+" · الفصل: "+classDisplay(currentClass)+" · "+state.meta.semester+" "+(state.meta.year||"");
   fitCanvasText(ctx,meta,LW-90,18,12,true);
   ctx.fillText(meta,LW/2,62);
   canvasFont(ctx,16,true);
@@ -1773,6 +2128,7 @@ function printAfterLogoReady(){
     catch(err){ showToastMsg("⚠️ تعذر فتح الطباعة. افتح الملف مباشرة في Chrome ثم أعد المحاولة", true); }
   },100);
 }
+document.getElementById("saveTrackerImageBtn").onclick=saveTrackerImage;
 document.getElementById("printBtn").onclick=function(){
   var logo=document.getElementById("schoolLogo");
   if(state.meta.logoDataUrl && logo && !(logo.complete && logo.naturalWidth)){
@@ -1917,6 +2273,7 @@ document.getElementById("removeLogoBtn").onclick=function(){ pendingLogoDataUrl=
 document.getElementById("settingsBtn").onclick=function(){
   document.getElementById("setSchool").value = state.meta.school;
   document.getElementById("setTeacher").value = state.meta.teacher;
+  document.getElementById("setPrincipal").value = state.meta.principal || "فوزي محمد الهلال";
   document.getElementById("setSubject").value = state.meta.subject;
   document.getElementById("setGrade").value = state.meta.grade;
   document.getElementById("setYear").value = state.meta.year;
@@ -1931,6 +2288,7 @@ document.getElementById("closeSettingsBtn").onclick=function(){
 document.getElementById("saveSettingsBtn").onclick=function(){
   state.meta.school = document.getElementById("setSchool").value || state.meta.school;
   state.meta.teacher = document.getElementById("setTeacher").value || state.meta.teacher;
+  state.meta.principal = document.getElementById("setPrincipal").value || state.meta.principal || "فوزي محمد الهلال";
   state.meta.subject = document.getElementById("setSubject").value || state.meta.subject;
   state.meta.year = document.getElementById("setYear").value.trim() || "1448هـ";
   if(pendingLogoDataUrl!==null) state.meta.logoDataUrl=pendingLogoDataUrl;
@@ -1949,6 +2307,7 @@ function applyMetaToUI(){
   document.getElementById("teacherNameDisplay").textContent = state.meta.teacher;
   document.getElementById("infoSchool").textContent = state.meta.school;
   document.getElementById("infoTeacher").textContent = state.meta.teacher;
+  var infoPrincipalEl=document.getElementById("infoPrincipal"); if(infoPrincipalEl) infoPrincipalEl.textContent = state.meta.principal || "فوزي محمد الهلال";
   document.getElementById("infoSubject").textContent = state.meta.subject;
   var infoYearEl=document.getElementById("infoYear"); if(infoYearEl) infoYearEl.textContent = state.meta.year || "1448هـ";
   document.getElementById("gradeSelect").value = state.meta.grade;
