@@ -1,15 +1,20 @@
 {
-  "name": "سجل متابعة العلوم",
+  "id": "./science-tracker",
+  "name": "سجل متابعة مادة العلوم",
   "short_name": "سجل العلوم",
-  "description": "سجل متابعة درجات العلوم للأول والثاني والثالث المتوسط",
-  "lang": "ar",
-  "dir": "rtl",
+  "description": "سجل متابعة درجات طلاب مادة العلوم مع حفظ تلقائي وطباعة وتقارير.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "orientation": "landscape",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
   "background_color": "#eef1f4",
   "theme_color": "#0b1526",
+  "lang": "ar",
+  "dir": "rtl",
   "icons": [
     {
       "src": "icon-192.png",
