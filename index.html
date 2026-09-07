@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>سجل متابعة العلوم - تطبيق PWA + الطباعة الناجحة - v17</title>
+<title>سجل متابعة العلوم - حذف صف أو عمود - v19</title>
 <style>
   :root{
     --navy:#0b1526; --navy2:#0f1e35;
@@ -112,7 +112,10 @@
   td input.score-input{min-width:34px;}
   td input.w-test{min-width:50px;}
   .name-cell{display:flex;align-items:center;gap:6px;}
-  .del-x{background:#eee;color:#c62828;border:none;border-radius:5px;width:26px;height:26px;font-size:16px;font-weight:bold;cursor:pointer;flex-shrink:0;}
+  .del-x{background:#fdeaea;color:#c62828;border:1px solid #f4b8b8;border-radius:6px;width:30px;height:30px;font-size:18px;font-weight:bold;cursor:pointer;flex-shrink:0;}
+  .col-head-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:32px;}
+  .col-delete{border:1px solid rgba(255,255,255,.75);background:rgba(255,255,255,.18);color:#fff;border-radius:50%;width:19px;height:19px;padding:0;line-height:16px;font-size:13px;font-weight:900;cursor:pointer;}
+  .col-delete:active{transform:scale(.9);background:rgba(255,255,255,.32);}
   .row-tools{display:flex;gap:3px;flex-shrink:0;}
   .row-tool{border:0;border-radius:5px;background:#e8edf3;color:#24354d;width:26px;height:26px;font-size:14px;font-weight:800;cursor:pointer;line-height:1;}
   .row-tool.insert{background:#e0f2f1;color:#00796b;}
@@ -205,6 +208,7 @@
     <div class="info-item">المدرسة: <b id="infoSchool">مدرسة أبي الدرداء المتوسطة</b></div>
     <div class="info-item">المعلم: <b id="infoTeacher">أ/ علي طاهر البقاشي</b></div>
     <div class="info-item">المادة: <b id="infoSubject">العلوم</b></div>
+    <div class="info-item">العام الدراسي: <b id="infoYear">1448هـ</b></div>
     <div class="info-item" id="appModeStatus">الحالة: <b>محفوظ محليًا</b></div>
     <div class="info-item">الصف:
       <select id="gradeSelect">
@@ -316,7 +320,7 @@
         <option value="الثاني المتوسط">الثاني المتوسط</option>
         <option value="الثالث المتوسط">الثالث المتوسط</option>
       </select></div>
-      <div><label>العام الدراسي</label><input type="text" id="setYear" placeholder="مثال: 1447هـ"></div>
+      <div><label>العام الدراسي</label><input type="text" id="setYear" placeholder="مثال: 1448هـ"></div>
       <div class="logo-setting-box">
         <label style="text-align:center;">شعار المدرسة</label>
         <img id="setLogoPreview" class="logo-preview" alt="معاينة شعار المدرسة">
@@ -470,7 +474,7 @@ function emptyStudent(){
   return { name:"", p:filledBlankArray(MAX_PART_COLS), h:filledBlankArray(MAX_HW_COLS), t:filledBlankArray(MAX_TASK_COLS), exams:filledBlankArray(MAX_EXAM_COLS) };
 }
 function defaultMeta(){
-  return { semester:"الفصل الدراسي الأول", year:"", school:"مدرسة أبي الدرداء المتوسطة",
+  return { semester:"الفصل الدراسي الأول", year:"1448هـ", school:"مدرسة أبي الدرداء المتوسطة",
            teacher:"أ/ علي طاهر البقاشي", subject:"العلوم", grade:"الأول المتوسط", fontScale:1, logoDataUrl:"", columns:defaultColumnConfig() };
 }
 function normalizeArray(arr, len){
@@ -534,6 +538,7 @@ function defaultState(){
 function normalizeState(parsed){
   parsed = parsed || {};
   var meta = Object.assign(defaultMeta(), parsed.meta || {});
+  if(!String(meta.year || "").trim()) meta.year = "1448هـ";
   meta.columns = normalizeColumnConfig(meta.columns);
   if(SEMESTERS.indexOf(meta.semester)===-1) meta.semester = SEMESTERS[0];
   if(GRADES.indexOf(meta.grade)===-1) meta.grade = GRADES[0];
@@ -760,15 +765,25 @@ function buildMainHeader(){
 }
 function buildSubHeader(){
   var c=cfg(), row = document.getElementById("subHeaderRow"), html = "";
-  for(var i=1;i<=c.participation;i++) html += '<th class="grp-part">'+i+'</th>';
+  function deletableHead(cls,label,kind,idx){
+    return '<th class="'+cls+'"><span class="col-head-wrap"><span>'+label+'</span><button type="button" class="col-delete" data-col-kind="'+kind+'" data-col-idx="'+idx+'" title="حذف هذا العمود">×</button></span></th>';
+  }
+  for(var i=0;i<c.participation;i++) html += deletableHead("grp-part",String(i+1),"p",i);
   html += '<th class="grp-part">مجموع المشاركة /10</th>';
-  for(var i=1;i<=c.homework;i++) html += '<th class="grp-hw">'+i+'</th>';
+  for(var i=0;i<c.homework;i++) html += deletableHead("grp-hw",String(i+1),"h",i);
   html += '<th class="grp-hw">مجموع الواجبات /10</th>';
-  for(var i=1;i<=c.tasks;i++) html += '<th class="grp-perf">'+i+'</th>';
+  for(var i=0;i<c.tasks;i++) html += deletableHead("grp-perf",String(i+1),"t",i);
   html += '<th class="grp-perf">مجموع المهام /20</th>';
-  for(var i=1;i<=c.exams;i++) html += '<th class="grp-test">اختبار '+i+' /20</th>';
+  for(var i=0;i<c.exams;i++) html += deletableHead("grp-test","اختبار "+(i+1)+" /20","e",i);
   html += '<th class="grp-test">درجة الفترة /20</th>';
   row.innerHTML = html;
+  row.onclick=function(ev){
+    var btn=ev.target.closest ? ev.target.closest(".col-delete") : null;
+    if(!btn) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    deleteAssessmentColumn(btn.dataset.colKind, parseInt(btn.dataset.colIdx,10));
+  };
 }
 
 /* ============ التبويبات مع عدد الطلاب ============ */
@@ -814,7 +829,7 @@ function buildTableBody(){
                 '<button class="row-tool insert" data-action="insert" data-idx="'+idx+'" title="إضافة طالب قبل هذا الصف">＋</button>'+
               '</div>'+
               '<input type="text" class="name-input" data-idx="'+idx+'" value="'+escapeAttr(s.name)+'" placeholder="اسم الطالب">'+
-              '<button class="del-x" data-idx="'+idx+'" title="حذف الطالب">×</button>'+
+              '<button class="del-x" data-idx="'+idx+'" title="حذف الصف كاملًا">×</button>'+
             '</div></td>';
     for(var i=0;i<c.participation;i++) html += '<td class="cell-part">'+scoreInput(idx,"p",i,s.p[i],"",34)+'</td>';
     html += '<td class="cell-part" id="sum-p-'+idx+'"><b>'+fmtScore(pSum)+'</b></td>';
@@ -1018,18 +1033,56 @@ function sortStudentsAlphabetically(){
 }
 
 function deleteStudent(idx){
-  var s = state.classes[currentClass].students[idx];
-  if(!s.name && sumArr(s.p)===0 && sumArr(s.h)===0 && sumArr(s.t)===0 && sumArr(s.exams)===0){
+  var students=state.classes[currentClass].students;
+  var s=students[idx] || emptyStudent();
+  var label = s.name && s.name.trim() ? ("صف الطالب: "+s.name) : ("الصف رقم "+(idx+1));
+  openConfirm("سيتم حذف "+label+" بالكامل، ثم تتحرك جميع الصفوف التي بعده للأعلى. إذا كان الصف يحتوي درجات فستُحذف نهائيًا. هل تريد المتابعة؟", function(){
+    students.splice(idx,1);
+    students.push(emptyStudent());
+    if(students.length>MAX_STUDENTS) students.length=MAX_STUDENTS;
+    while(students.length<MAX_STUDENTS) students.push(emptyStudent());
+    selectedRows={};
+    save(false);
+    renderAll();
+    showToastMsg("✓ تم حذف الصف وتحريك الصفوف التالية للأعلى", false);
+  });
+}
+
+function deleteAssessmentColumn(kind, idx){
+  var c=cfg();
+  var meta={
+    p:{key:"participation",arr:"p",label:"المشاركة"},
+    h:{key:"homework",arr:"h",label:"الواجبات"},
+    t:{key:"tasks",arr:"t",label:"المهام الأدائية"},
+    e:{key:"exams",arr:"exams",label:"الاختبارات"}
+  }[kind];
+  if(!meta || isNaN(idx)) return;
+  var count=c[meta.key];
+  if(count<=1){
+    showToastMsg("⚠️ يجب الإبقاء على خانة واحدة على الأقل في "+meta.label, true);
     return;
   }
-  var label = s.name ? ("الطالب: "+s.name) : ("الصف رقم "+(idx+1));
-  openConfirm("سيتم حذف "+label+" وجميع درجاته من هذا الفصل الدراسي. هل تريد المتابعة؟", function(){
-    state.classes[currentClass].students[idx] = emptyStudent();
-    save();
-    buildTableBody();
-    updateStats();
-    buildTabs();
-    showToastMsg("✓ تم حذف بيانات الطالب", false);
+  if(idx<0 || idx>=count) return;
+  openConfirm("سيتم حذف عمود "+meta.label+" رقم "+(idx+1)+" وجميع القيم الموجودة فيه، ثم تتحرك الأعمدة التالية لليسار. هل تريد المتابعة؟", function(){
+    GRADES.forEach(function(gradeKey){
+      SEMESTERS.forEach(function(semesterKey){
+        CLASSES.forEach(function(classKey){
+          var classObj=state.grades && state.grades[gradeKey] && state.grades[gradeKey][semesterKey] && state.grades[gradeKey][semesterKey][classKey];
+          if(!classObj || !Array.isArray(classObj.students)) return;
+          classObj.students.forEach(function(s){
+            var arr=s[meta.arr];
+            if(!Array.isArray(arr)) return;
+            arr.splice(idx,1);
+            arr.push("");
+          });
+        });
+      });
+    });
+    state.meta.columns[meta.key]=count-1;
+    selectedRows={};
+    save(false);
+    renderAll();
+    showToastMsg("✓ تم حذف العمود وتحريك القيم التالية", false);
   });
 }
 
@@ -1879,7 +1932,7 @@ document.getElementById("saveSettingsBtn").onclick=function(){
   state.meta.school = document.getElementById("setSchool").value || state.meta.school;
   state.meta.teacher = document.getElementById("setTeacher").value || state.meta.teacher;
   state.meta.subject = document.getElementById("setSubject").value || state.meta.subject;
-  state.meta.year = document.getElementById("setYear").value;
+  state.meta.year = document.getElementById("setYear").value.trim() || "1448هـ";
   if(pendingLogoDataUrl!==null) state.meta.logoDataUrl=pendingLogoDataUrl;
   var requestedGrade = document.getElementById("setGrade").value || state.meta.grade;
   if(requestedGrade !== state.meta.grade) switchGrade(requestedGrade, false);
@@ -1897,6 +1950,7 @@ function applyMetaToUI(){
   document.getElementById("infoSchool").textContent = state.meta.school;
   document.getElementById("infoTeacher").textContent = state.meta.teacher;
   document.getElementById("infoSubject").textContent = state.meta.subject;
+  var infoYearEl=document.getElementById("infoYear"); if(infoYearEl) infoYearEl.textContent = state.meta.year || "1448هـ";
   document.getElementById("gradeSelect").value = state.meta.grade;
   document.getElementById("gradeBadge").textContent = state.meta.grade;
   document.getElementById("semesterSelect").value = state.meta.semester;
