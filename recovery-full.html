@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>الفحص الشامل لإنقاذ سجل العلوم</title>
+<style>
+body{font-family:Tahoma,Arial,sans-serif;background:#eef2f7;margin:0;padding:18px;color:#172033}
+.wrap{max-width:900px;margin:auto;background:white;padding:22px;border-radius:18px;box-shadow:0 8px 28px #0002}
+h1{margin-top:0}.note{background:#fff7d6;border:1px solid #e4c758;padding:12px;border-radius:10px;line-height:1.8}
+button{width:100%;padding:15px;margin:9px 0;border:0;border-radius:11px;font-weight:bold;font-size:17px}
+.scan{background:#155e75;color:white}.download{background:#166534;color:white}.download:disabled{opacity:.45}
+pre{direction:ltr;text-align:left;white-space:pre-wrap;word-break:break-word;background:#f5f7fa;padding:12px;border-radius:10px;max-height:480px;overflow:auto}
+.ok{color:#166534;font-weight:bold}.warn{color:#a16207;font-weight:bold}
+</style></head>
+<body><div class="wrap">
+<h1>🛟 الفحص الشامل للتخزين القديم</h1>
+<div class="note"><b>قراءة فقط:</b> هذه الصفحة لا تكتب ولا تمسح ولا تستبدل أي بيانات. تفحص جميع مفاتيح LocalStorage وتحاول فحص جميع قواعد IndexedDB الموجودة على نفس نطاق GitHub Pages.</div>
+<button class="scan" id="scan">🔎 بدء الفحص الشامل</button>
+<button class="download" id="download" disabled>⬇️ تنزيل تقرير الإنقاذ الكامل JSON</button>
+<div id="status">لم يبدأ الفحص بعد.</div><pre id="out"></pre>
+</div>
+<script>
+"use strict";
+let report={time:new Date().toISOString(),origin:location.origin,localStorage:[],indexedDB:[]};
+
+function analyze(v){
+ let a={length:(v==null?0:String(v).length),json:false,names:0,scored:0,preview:""};
+ if(v==null)return a;
+ let s=String(v); a.preview=s.slice(0,160);
+ try{
+  let x=JSON.parse(s); a.json=true;
+  const seen=new WeakSet();
+  function walk(o){
+   if(!o||typeof o!=="object")return;
+   if(seen.has(o))return; seen.add(o);
+   if(Array.isArray(o)){o.forEach(walk);return;}
+   if(Object.prototype.hasOwnProperty.call(o,"name")){
+    if(String(o.name??"").trim())a.names++;
+    let vals=[];
+    ["p","h","t","exams"].forEach(k=>{if(Array.isArray(o[k]))vals=vals.concat(o[k])});
+    if(vals.some(z=>String(z??"").trim()!==""))a.scored++;
+   }
+   Object.values(o).forEach(walk);
+  } walk(x);
+ }catch(e){}
+ return a;
+}
+function safeVal(v){
+ try{return typeof v==="string"?v:JSON.stringify(v)}catch(e){return String(v)}
+}
+async function scanLS(){
+ let arr=[];
+ try{
+  for(let i=0;i<localStorage.length;i++){
+   let k=localStorage.key(i),v=localStorage.getItem(k);
+   arr.push({key:k,analysis:analyze(v),raw:v});
+  }
+ }catch(e){arr.push({error:String(e)})}
+ return arr;
+}
+function openExistingDB(name,version){
+ return new Promise(resolve=>{
+  let created=false, req;
+  try{req=indexedDB.open(name,version)}catch(e){resolve({name,error:String(e)});return}
+  req.onupgradeneeded=()=>{created=true; try{req.transaction.abort()}catch(e){}};
+  req.onerror=()=>resolve({name,error:"تعذر فتح القاعدة"});
+  req.onsuccess=()=>{
+   let db=req.result;
+   if(created){db.close();resolve({name,error:"قاعدة غير موجودة سابقًا"});return}
+   let result={name,version:db.version,stores:[]}, stores=[...db.objectStoreNames];
+   if(!stores.length){db.close();resolve(result);return}
+   let pending=stores.length;
+   stores.forEach(sn=>{
+    let sr={name:sn,records:[]}; result.stores.push(sr);
+    try{
+     let tx=db.transaction(sn,"readonly"), store=tx.objectStore(sn), r=store.openCursor();
+     r.onsuccess=e=>{
+      let c=e.target.result;
+      if(c){
+       let val=safeVal(c.value);
+       sr.records.push({key:safeVal(c.key),analysis:analyze(val),raw:val});
+       c.continue();
+      }else{if(--pending===0){db.close();resolve(result)}}
+     };
+     r.onerror=()=>{sr.error="تعذر قراءة المخزن";if(--pending===0){db.close();resolve(result)}};
+    }catch(e){sr.error=String(e);if(--pending===0){db.close();resolve(result)}}
+   });
+  };
+ });
+}
+async function scanIDB(){
+ if(!indexedDB)return [{error:"IndexedDB غير مدعوم"}];
+ if(typeof indexedDB.databases!=="function")return [{error:"المتصفح لا يسمح بعرض قائمة قواعد IndexedDB"}];
+ let list=[];
+ try{list=await indexedDB.databases()}catch(e){return [{error:String(e)}]}
+ let out=[];
+ for(const d of list){
+  if(!d.name)continue;
+  out.push(await openExistingDB(d.name,d.version));
+ }
+ return out;
+}
+function summarize(r){
+ let lines=["=== LocalStorage ==="];
+ if(!r.localStorage.length)lines.push("لا توجد مفاتيح.");
+ r.localStorage.forEach(x=>{
+  if(x.error){lines.push("خطأ: "+x.error);return}
+  let a=x.analysis;lines.push(`${x.key} | الحجم ${a.length} | JSON ${a.json?"نعم":"لا"} | أسماء ${a.names} | لديهم درجات ${a.scored}`);
+ });
+ lines.push("\n=== IndexedDB ===");
+ if(!r.indexedDB.length)lines.push("لا توجد قواعد ظاهرة.");
+ r.indexedDB.forEach(db=>{
+  lines.push(`قاعدة: ${db.name||"؟"} | الإصدار: ${db.version||"؟"}${db.error?" | "+db.error:""}`);
+  (db.stores||[]).forEach(st=>{
+   lines.push(`  مخزن: ${st.name} | السجلات: ${st.records.length}${st.error?" | "+st.error:""}`);
+   st.records.forEach(rec=>{
+    let a=rec.analysis;lines.push(`    مفتاح ${rec.key} | الحجم ${a.length} | JSON ${a.json?"نعم":"لا"} | أسماء ${a.names} | لديهم درجات ${a.scored}`);
+   });
+  });
+ });
+ return lines.join("\n");
+}
+document.getElementById("scan").onclick=async()=>{
+ document.getElementById("status").textContent="جاري الفحص…";
+ report={time:new Date().toISOString(),origin:location.origin,localStorage:await scanLS(),indexedDB:await scanIDB()};
+ document.getElementById("out").textContent=summarize(report);
+ let candidates=0;
+ report.localStorage.forEach(x=>{if(x.analysis&&(x.analysis.names||x.analysis.scored))candidates++});
+ report.indexedDB.forEach(db=>(db.stores||[]).forEach(st=>(st.records||[]).forEach(x=>{if(x.analysis&&(x.analysis.names||x.analysis.scored))candidates++})));
+ document.getElementById("status").innerHTML=candidates?`<span class="ok">تم الفحص. عُثر على ${candidates} عنصر/عناصر تحتوي أسماء أو درجات.</span>`:`<span class="warn">تم الفحص، ولم يظهر حتى الآن عنصر يحتوي أسماء أو درجات.</span>`;
+ document.getElementById("download").disabled=false;
+};
+document.getElementById("download").onclick=()=>{
+ let b=new Blob([JSON.stringify(report,null,2)],{type:"application/json;charset=utf-8"});
+ let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="science-storage-full-recovery-report.json";document.body.appendChild(a);a.click();a.remove();
+};
+</script></body></html>
