@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>فحص مفتاح سجل العلوم القديم</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f4f7fb;margin:0;padding:18px;color:#172033}
+.card{max-width:760px;margin:auto;background:#fff;padding:20px;border-radius:18px;box-shadow:0 6px 24px #0002}
+h1{font-size:23px} button{width:100%;padding:15px;margin:7px 0;border:0;border-radius:12px;font-size:18px;font-weight:bold}
+.scan{background:#146c43;color:#fff}.download{background:#0d6efd;color:#fff}
+pre{white-space:pre-wrap;word-break:break-word;background:#f2f4f7;padding:12px;border-radius:12px}
+.warn{background:#fff3cd;padding:12px;border-radius:12px}
+</style>
+</head>
+<body><div class="card">
+<h1>فحص نسخة سجل العلوم القديمة — قراءة فقط</h1>
+<p class="warn">هذه الصفحة لا تكتب ولا تحذف أي بيانات. تبحث فقط عن مفتاح التخزين القديم وتفحص وجود أسماء أو درجات.</p>
+<button class="scan" onclick="scan()">بدء الفحص الآمن</button>
+<button class="download" id="dl" onclick="downloadReport()" disabled>تنزيل تقرير الفحص JSON</button>
+<pre id="out">لم يبدأ الفحص بعد.</pre>
+</div>
+<script>
+const KEY="science_clean_4tasks_grades_v1";
+let report={key:KEY,origin:location.origin,time:null,localStorage:null,indexedDB:[]};
+
+function analyze(raw){
+  let r={exists:raw!==null && raw!==undefined,size:raw?String(raw).length:0,json:false,names:0,studentsWithGrades:0};
+  if(!r.exists)return r;
+  try{
+    const obj=typeof raw==="string"?JSON.parse(raw):raw;r.json=true;
+    const seen=new WeakSet();
+    function walk(x){
+      if(!x||typeof x!=="object")return;
+      if(seen.has(x))return;seen.add(x);
+      if(Object.prototype.hasOwnProperty.call(x,"name")){
+        const name=String(x.name??"").trim();
+        if(name)r.names++;
+        let has=false;
+        ["p","h","t","exams"].forEach(k=>{if(Array.isArray(x[k])&&x[k].some(v=>String(v??"").trim()!==""))has=true});
+        ["e1","e2"].forEach(k=>{if(String(x[k]??"").trim()!=="")has=true});
+        if(has)r.studentsWithGrades++;
+      }
+      if(Array.isArray(x))x.forEach(walk); else Object.values(x).forEach(walk);
+    } walk(obj);
+  }catch(e){}
+  return r;
+}
+async function scanIDB(){
+  let results=[];
+  if(!indexedDB.databases)return results;
+  let dbs=[];
+  try{dbs=await indexedDB.databases()}catch(e){return results}
+  for(const info of dbs){
+    if(!info.name)continue;
+    try{
+      const db=await new Promise((res,rej)=>{const q=indexedDB.open(info.name);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)});
+      for(const storeName of Array.from(db.objectStoreNames)){
+        const rows=await new Promise(resolve=>{
+          let arr=[];
+          try{
+            const tx=db.transaction(storeName,"readonly"),st=tx.objectStore(storeName),q=st.openCursor();
+            q.onsuccess=e=>{const c=e.target.result;if(!c)return resolve(arr);if(String(c.key)===KEY)arr.push({key:String(c.key),analysis:analyze(c.value)});c.continue()};
+            q.onerror=()=>resolve(arr);
+          }catch(e){resolve(arr)}
+        });
+        if(rows.length)results.push({database:info.name,store:storeName,rows});
+      } db.close();
+    }catch(e){}
+  } return results;
+}
+async function scan(){
+  const out=document.getElementById("out");out.textContent="جارٍ الفحص...";
+  report.time=new Date().toISOString();
+  let raw=null;try{raw=localStorage.getItem(KEY)}catch(e){}
+  report.localStorage=analyze(raw);
+  report.indexedDB=await scanIDB();
+  let text="المفتاح: "+KEY+"\n\nLocalStorage:\n"+
+    (report.localStorage.exists?"موجود":"غير موجود")+
+    " | أسماء: "+report.localStorage.names+
+    " | طلاب لديهم درجات: "+report.localStorage.studentsWithGrades+
+    " | الحجم: "+report.localStorage.size+"\n\nIndexedDB:\n";
+  if(!report.indexedDB.length) text+="لم توجد نسخة بهذا المفتاح في قواعد البيانات المتاحة.";
+  else report.indexedDB.forEach(x=>x.rows.forEach(y=>text+=
+    "\nقاعدة: "+x.database+" | مخزن: "+x.store+
+    " | أسماء: "+y.analysis.names+
+    " | طلاب لديهم درجات: "+y.analysis.studentsWithGrades+
+    " | الحجم: "+y.analysis.size));
+  out.textContent=text;
+  document.getElementById("dl").disabled=false;
+}
+function downloadReport(){
+ const blob=new Blob([JSON.stringify(report,null,2)],{type:"application/json"});
+ const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="old-science-key-recovery-report.json";a.click();URL.revokeObjectURL(a.href);
+}
+</script></body></html>
