@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>إنقاذ بيانات سجل متابعة العلوم</title>
+<style>
+body{font-family:Tahoma,Arial,sans-serif;background:#eef2f7;margin:0;padding:20px;color:#172033}
+.wrap{max-width:760px;margin:auto;background:#fff;border-radius:18px;padding:22px;box-shadow:0 8px 30px #0002}
+h1{font-size:24px;margin-top:0}.note{background:#fff8dc;border:1px solid #e5c85c;padding:12px;border-radius:10px;line-height:1.8}
+button{width:100%;padding:15px;margin:8px 0;border:0;border-radius:12px;font-size:17px;font-weight:bold;cursor:pointer}
+.read{background:#164e63;color:#fff}.export{background:#166534;color:#fff}.export:disabled{opacity:.45}
+pre{white-space:pre-wrap;word-break:break-word;background:#f5f7fa;border-radius:10px;padding:12px;max-height:330px;overflow:auto}
+.ok{color:#166534;font-weight:bold}.bad{color:#b91c1c;font-weight:bold}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🛟 إنقاذ بيانات سجل متابعة العلوم</h1>
+<div class="note">
+هذه الصفحة <b>للقراءة فقط</b>. لا تمسح ولا تستبدل بيانات السجل.
+يجب رفعها باسم <b>recovery.html</b> داخل نفس مجلد <b>science-tracker</b> على GitHub Pages.
+</div>
+<button class="read" id="readBtn">🔎 فحص البيانات القديمة</button>
+<button class="export" id="exportBtn" disabled>⬇️ تنزيل البيانات التي تم العثور عليها</button>
+<div id="status">لم يبدأ الفحص بعد.</div>
+<pre id="details"></pre>
+</div>
+<script>
+"use strict";
+const KEY="st_track_v1", DB="st_track_idb", STORE="kv";
+let found=null, foundFrom="";
+
+function summary(raw){
+  try{
+    const x=JSON.parse(raw);
+    let names=0, scored=0;
+    const walk=(obj)=>{
+      if(!obj || typeof obj!=="object") return;
+      if(Array.isArray(obj)){
+        obj.forEach(v=>walk(v)); return;
+      }
+      if(Object.prototype.hasOwnProperty.call(obj,"name") && Array.isArray(obj.p)){
+        if(String(obj.name||"").trim()) names++;
+        const vals=[...(obj.p||[]),...(obj.h||[]),...(obj.t||[]),...(obj.exams||[])];
+        if(vals.some(v=>String(v??"").trim()!=="")) scored++;
+      }
+      Object.values(obj).forEach(v=>walk(v));
+    };
+    walk(x);
+    return {valid:true,names,scored,version:x.version??"غير محدد"};
+  }catch(e){ return {valid:false,names:0,scored:0,version:"—"}; }
+}
+
+function showCandidate(label, raw){
+  if(!raw) return label+": لا توجد بيانات.\n";
+  const s=summary(raw);
+  return label+": "+(s.valid?"صالحة":"غير قابلة للقراءة")+
+    " | الأسماء: "+s.names+" | طلاب لديهم درجات: "+s.scored+" | الإصدار: "+s.version+"\n";
+}
+
+function readIDB(){
+  return new Promise(resolve=>{
+    if(!indexedDB){ resolve(null); return; }
+    const req=indexedDB.open(DB,1);
+    req.onerror=()=>resolve(null);
+    req.onupgradeneeded=()=>{ try{req.transaction.abort()}catch(e){} resolve(null); };
+    req.onsuccess=()=>{
+      const db=req.result;
+      if(!db.objectStoreNames.contains(STORE)){ db.close(); resolve(null); return; }
+      try{
+        const tx=db.transaction(STORE,"readonly");
+        const g=tx.objectStore(STORE).get(KEY);
+        g.onsuccess=()=>{ const v=g.result||null; db.close(); resolve(v); };
+        g.onerror=()=>{ db.close(); resolve(null); };
+      }catch(e){ db.close(); resolve(null); }
+    };
+  });
+}
+
+document.getElementById("readBtn").onclick=async()=>{
+  const out=document.getElementById("details"), st=document.getElementById("status");
+  st.textContent="جاري الفحص…"; out.textContent="";
+  let ls=null; try{ls=localStorage.getItem(KEY)}catch(e){}
+  const idb=await readIDB();
+  out.textContent=showCandidate("LocalStorage",ls)+showCandidate("IndexedDB",idb);
+
+  const a=ls?summary(ls):null, b=idb?summary(idb):null;
+  const scoreA=a&&a.valid ? a.names+a.scored*2 : -1;
+  const scoreB=b&&b.valid ? b.names+b.scored*2 : -1;
+  if(scoreA<0 && scoreB<0){
+    st.innerHTML='<span class="bad">لم يتم العثور على نسخة صالحة.</span>';
+    return;
+  }
+  if(scoreB>scoreA){ found=idb; foundFrom="IndexedDB"; }
+  else { found=ls; foundFrom="LocalStorage"; }
+  const s=summary(found);
+  st.innerHTML='<span class="ok">تم العثور على أفضل نسخة في '+foundFrom+
+    ' — الأسماء: '+s.names+'، وطلاب لديهم درجات: '+s.scored+'.</span>';
+  document.getElementById("exportBtn").disabled=false;
+};
+
+document.getElementById("exportBtn").onclick=()=>{
+  if(!found) return;
+  const blob=new Blob([found],{type:"application/json;charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="science-tracker-recovered-"+Date.now()+".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+};
+</script>
+</body>
+</html>
