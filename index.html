@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>سجل متابعة العلوم - لوحة التحليل - v21 محمي</title>
+<title>سجل متابعة العلوم - لوحة التحليل - v22</title>
 <style>
   :root{
     --navy:#0b1526; --navy2:#0f1e35;
@@ -387,6 +387,10 @@
       <button class="abtn b-import" id="exportBackupBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="abtn b-keypad" id="importBackupBtn" style="background:#607d8b;">⬆️ استيراد نسخة احتياطية</button>
       <button class="abtn" id="restoreSafeBtn" style="background:#0f766e;">🛟 استعادة آخر نسخة آمنة</button>
+          <button class="btn" id="oneDriveBackupBtn" type="button">☁️ حفظ نسخة إلى OneDrive</button>
+          <button class="btn" id="oneDriveRestoreBtn" type="button">♻️ استعادة نسخة OneDrive</button>
+          <input id="oneDriveRestoreFile" type="file" accept=".json,application/json" style="display:none">
+
     </div>
     <input type="file" id="importFile" accept=".json" style="display:none;">
 
@@ -2496,6 +2500,118 @@ try{
 }catch(e){}
 
 })();
+
+/* ===== v22: OneDrive backup bridge =====
+   Keeps v21 local protection unchanged.
+   On Android, uses Web Share so OneDrive can be chosen as the destination.
+   Fallback: downloads a JSON file that can be uploaded to OneDrive.
+*/
+function buildV22CloudBackup(){
+  try { save(false); } catch(e) {}
+  let payload = null;
+  try { payload = localStorage.getItem(STORAGE_KEY); } catch(e) {}
+  if(!payload){
+    try { payload = JSON.stringify(data); } catch(e) { payload = "{}"; }
+  }
+  return JSON.stringify({
+    app: "science-tracker",
+    backupVersion: 22,
+    createdAt: new Date().toISOString(),
+    storageKey: STORAGE_KEY,
+    payload: JSON.parse(payload)
+  }, null, 2);
+}
+
+async function backupToOneDriveV22(){
+  try{
+    const content = buildV22CloudBackup();
+    const stamp = new Date().toISOString().replace(/[:.]/g,"-");
+    const filename = `science-tracker-v22-backup-${stamp}.json`;
+    const file = new File([content], filename, {type:"application/json"});
+
+    if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){
+      try{
+        await navigator.share({
+          title:"نسخة احتياطية لسجل العلوم",
+          text:"احفظ هذه النسخة في OneDrive.",
+          files:[file]
+        });
+        if(typeof toast === "function") toast("☁️ تم تجهيز النسخة؛ اختر OneDrive للحفظ");
+        return;
+      }catch(err){
+        if(err && err.name === "AbortError") return;
+      }
+    }
+
+    const url = URL.createObjectURL(file);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    if(typeof toast === "function") toast("تم تنزيل النسخة؛ ارفعها إلى OneDrive");
+  }catch(err){
+    console.error(err);
+    alert("تعذر إنشاء نسخة OneDrive: " + (err?.message || err));
+  }
+}
+
+async function restoreOneDriveBackupV22(file){
+  if(!file) return;
+  try{
+    const raw = await file.text();
+    const wrapper = JSON.parse(raw);
+    const incoming = wrapper && wrapper.payload ? wrapper.payload : wrapper;
+    if(!incoming || typeof incoming !== "object") throw new Error("ملف النسخة غير صالح");
+
+    if(!confirm("سيتم استبدال بيانات السجل الحالية ببيانات النسخة المختارة. هل تريد المتابعة؟")) return;
+
+    try { makeSafeSnapshot(true); } catch(e) {}
+    data = normalizeData(incoming);
+    const ok = save(true, true);
+    if(ok === false) throw new Error("تعذر حفظ البيانات المستعادة");
+    render();
+    if(typeof toast === "function") toast("♻️ تمت استعادة نسخة OneDrive بنجاح");
+  }catch(err){
+    console.error(err);
+    alert("تعذر استعادة النسخة: " + (err?.message || err));
+  }finally{
+    const inp = document.getElementById("oneDriveRestoreFile");
+    if(inp) inp.value = "";
+  }
+}
+
+document.addEventListener("DOMContentLoaded", ()=>{
+  const b = document.getElementById("oneDriveBackupBtn");
+  const r = document.getElementById("oneDriveRestoreBtn");
+  const f = document.getElementById("oneDriveRestoreFile");
+  if(b) b.addEventListener("click", backupToOneDriveV22);
+  if(r && f) r.addEventListener("click", ()=>f.click());
+  if(f) f.addEventListener("change", ()=>restoreOneDriveBackupV22(f.files && f.files[0]));
+});
+
+
+/* v22.1 header-name-size */
+(function(){
+  function emphasizeHeaderNames(){
+    const phrases=["علي طاهر البقاشي","مدرسة أبي الدرداء المتوسطة"];
+    document.querySelectorAll("body *").forEach(function(el){
+      if(el.children.length===0){
+        const t=(el.textContent||"").trim();
+        if(phrases.some(function(p){return t.indexOf(p)!==-1;})){
+          el.style.setProperty("font-size","1.28em","important");
+          el.style.setProperty("font-weight","900","important");
+          el.style.setProperty("line-height","1.55","important");
+        }
+      }
+    });
+  }
+  if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded",emphasizeHeaderNames);
+  }else{
+    emphasizeHeaderNames();
+  }
+})();
+
 </script>
 </body>
 </html>
