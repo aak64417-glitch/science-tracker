@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>سجل متابعة العلوم - لوحة التحليل - v21</title>
+<title>سجل متابعة العلوم - لوحة التحليل - v21 محمي</title>
 <style>
   :root{
     --navy:#0b1526; --navy2:#0f1e35;
@@ -277,6 +277,7 @@
       <button class="abtn b-font" id="fontIncBtn" type="button">A+</button>
     </div>
     <button class="abtn b-add" id="addStudentBtn">➕ إضافة طالب</button>
+    <button class="abtn b-add" id="transferStudentBtn" style="background:#0f766e;">🔄 نقل طالب</button>
     <button class="abtn b-sort" id="sortStudentsBtn">🔤 ترتيب أبجدي</button>
     <button class="abtn b-columns" id="columnsBtn">↔️ عدد الخانات</button>
     <button class="abtn b-import" id="importNamesBtn">☁️ استيراد الأسماء</button>
@@ -385,6 +386,7 @@
     <div class="modal-actions">
       <button class="abtn b-import" id="exportBackupBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="abtn b-keypad" id="importBackupBtn" style="background:#607d8b;">⬆️ استيراد نسخة احتياطية</button>
+      <button class="abtn" id="restoreSafeBtn" style="background:#0f766e;">🛟 استعادة آخر نسخة آمنة</button>
     </div>
     <input type="file" id="importFile" accept=".json" style="display:none;">
 
@@ -521,6 +523,24 @@
     <div class="modal-actions">
       <button class="abtn b-keypad" id="cancelAddStudentBtn" style="background:#607d8b;">إلغاء</button>
       <button class="abtn b-add" id="applyAddStudentBtn">إضافة الطالب</button>
+    </div>
+  </div>
+</div>
+
+<!-- نقل طالب مع جميع بياناته -->
+<div class="modal-overlay" id="transferStudentModal">
+  <div class="modal-box">
+    <h3>🔄 نقل طالب مع جميع درجاته</h3>
+    <p>اختر الطالب والوجهة. سيتم نقل الاسم وجميع الدرجات كما هي، مع إنشاء نسخة آمنة قبل النقل.</p>
+    <div class="settings-grid">
+      <div><label>الطالب من الفصل الحالي</label><select id="transferStudentSelect"></select></div>
+      <div><label>الصف الجديد</label><select id="transferGradeSelect"></select></div>
+      <div><label>الفصل الدراسي</label><select id="transferSemesterSelect"></select></div>
+      <div><label>الفصل الجديد</label><select id="transferClassSelect"></select></div>
+    </div>
+    <div class="modal-actions">
+      <button class="abtn b-keypad" id="cancelTransferBtn" style="background:#607d8b;">إلغاء</button>
+      <button class="abtn b-add" id="applyTransferBtn" style="background:#0f766e;">تأكيد النقل</button>
     </div>
   </div>
 </div>
@@ -767,29 +787,59 @@ function idbGet(key, cb){
 }
 
 var saveTimer=null;
-function save(showToast){
-  var payload = JSON.stringify(persistedStateObject());
-  var localOk = false;
+var LAST_GOOD_KEY=STORAGE_KEY+"__last_good";
+var SNAPSHOT_PREFIX=STORAGE_KEY+"__snapshot__";
+var lastSnapshotAt=0;
+function payloadStats(obj){
+  var names=0, scored=0;
   try{
-    localStorage.setItem(STORAGE_KEY, payload);
-    var check = localStorage.getItem(STORAGE_KEY);
-    if(check !== payload){
-      localStorage.setItem(STORAGE_KEY, payload);
-      check = localStorage.getItem(STORAGE_KEY);
+    var grades=obj && obj.grades ? obj.grades : {};
+    Object.keys(grades).forEach(function(g){ Object.keys(grades[g]||{}).forEach(function(sem){ Object.keys(grades[g][sem]||{}).forEach(function(cls){
+      ((grades[g][sem][cls]||{}).students||[]).forEach(function(st){
+        if(st && String(st.name||"").trim()) names++;
+        [st&&st.p,st&&st.h,st&&st.t,st&&st.exams].forEach(function(a){ if(Array.isArray(a)) a.forEach(function(v){ if(v!==null&&v!==undefined&&String(v).trim()!=="") scored++; }); });
+      });
+    }); }); });
+  }catch(e){}
+  return {names:names,scored:scored};
+}
+function rememberGoodPayload(payload){
+  try{ localStorage.setItem(LAST_GOOD_KEY,payload); }catch(e){}
+  idbSet(LAST_GOOD_KEY,payload);
+}
+function makeSafeSnapshot(force){
+  var payload=JSON.stringify(persistedStateObject()), st=payloadStats(JSON.parse(payload));
+  if(st.names===0 && st.scored===0) return;
+  var now=Date.now(); if(!force && now-lastSnapshotAt<300000) return;
+  lastSnapshotAt=now;
+  var key=SNAPSHOT_PREFIX+now;
+  try{ localStorage.setItem(key,payload); }catch(e){}
+  idbSet(key,payload);
+  rememberGoodPayload(payload);
+}
+function save(showToast, allowEmpty){
+  var obj=persistedStateObject();
+  var payload=JSON.stringify(obj);
+  var stats=payloadStats(obj);
+  if(!allowEmpty && stats.names===0 && stats.scored===0){
+    var previous=null; try{ previous=localStorage.getItem(LAST_GOOD_KEY); }catch(e){}
+    if(previous){
+      try{ var ps=payloadStats(JSON.parse(previous)); if(ps.names>0 || ps.scored>0){ showToastMsg("🛡️ تم منع سجل فارغ من استبدال النسخة الآمنة", true); return false; } }catch(e){}
     }
-    localOk = (check === payload);
-    if(localOk){
-      localLoadValid = true;
-      if(showToast!==false) showToastMsg("✓ تم الحفظ تلقائيًا", false);
-    } else {
-      showToastMsg("⚠️ تعذر التأكد من الحفظ المحلي - تم تشغيل النسخة الاحتياطية", true);
-    }
-  }catch(e){
-    showToastMsg("⚠️ تعذر الحفظ المحلي - ستتم محاولة النسخة الاحتياطية الداخلية", true);
   }
-  idbSet(STORAGE_KEY, payload);
+  var localOk=false;
+  try{
+    localStorage.setItem(STORAGE_KEY,payload);
+    var check=localStorage.getItem(STORAGE_KEY);
+    if(check!==payload){ localStorage.setItem(STORAGE_KEY,payload); check=localStorage.getItem(STORAGE_KEY); }
+    localOk=(check===payload);
+    if(localOk){ localLoadValid=true; if(stats.names>0 || stats.scored>0){ rememberGoodPayload(payload); makeSafeSnapshot(false); } if(showToast!==false) showToastMsg("✓ تم الحفظ تلقائيًا",false); }
+    else showToastMsg("⚠️ تعذر التأكد من الحفظ المحلي - تم تشغيل النسخة الاحتياطية",true);
+  }catch(e){ showToastMsg("⚠️ تعذر الحفظ المحلي - ستتم محاولة النسخة الاحتياطية الداخلية",true); }
+  idbSet(STORAGE_KEY,payload);
   return localOk;
 }
+
 function showToastMsg(msg, warn){
   var t=document.getElementById("toast");
   if(!t) return;
@@ -1247,6 +1297,34 @@ document.getElementById("applyAddStudentBtn").onclick=function(){
 document.getElementById("addStudentName").addEventListener("keydown",function(e){
   if(e.key==="Enter") document.getElementById("applyAddStudentBtn").click();
 });
+
+/* ============ نقل طالب بين الصفوف والفصول ============ */
+function openTransferStudent(){
+  var students=state.classes[currentClass].students;
+  var ss=document.getElementById("transferStudentSelect"); ss.innerHTML="";
+  students.forEach(function(st,i){ if(st.name&&st.name.trim()){ var o=document.createElement("option"); o.value=i; o.textContent=(i+1)+" - "+st.name; ss.appendChild(o); } });
+  if(!ss.options.length){ showToastMsg("⚠️ لا توجد أسماء طلاب في الفصل الحالي",true); return; }
+  var gs=document.getElementById("transferGradeSelect"); gs.innerHTML=""; GRADES.forEach(function(g){var o=document.createElement("option");o.value=g;o.textContent=g;gs.appendChild(o);}); gs.value=state.meta.grade;
+  var sem=document.getElementById("transferSemesterSelect"); sem.innerHTML=""; SEMESTERS.forEach(function(x){var o=document.createElement("option");o.value=x;o.textContent=x;sem.appendChild(o);}); sem.value=state.meta.semester;
+  var cs=document.getElementById("transferClassSelect"); cs.innerHTML=""; CLASSES.forEach(function(c){var o=document.createElement("option");o.value=c;o.textContent=c;cs.appendChild(o);}); cs.value=currentClass;
+  document.getElementById("transferStudentModal").classList.add("open");
+}
+document.getElementById("transferStudentBtn").onclick=openTransferStudent;
+document.getElementById("cancelTransferBtn").onclick=function(){document.getElementById("transferStudentModal").classList.remove("open");};
+document.getElementById("applyTransferBtn").onclick=function(){
+  var srcIdx=parseInt(document.getElementById("transferStudentSelect").value,10);
+  var tg=document.getElementById("transferGradeSelect").value, ts=document.getElementById("transferSemesterSelect").value, tc=document.getElementById("transferClassSelect").value;
+  var src=state.classes[currentClass].students[srcIdx]; if(!src||!src.name.trim()) return;
+  if(tg===state.meta.grade&&ts===state.meta.semester&&tc===currentClass){showToastMsg("⚠️ اختر فصلًا مختلفًا للنقل",true);return;}
+  var target=state.grades[tg][ts][tc].students; var dest=target.findIndex(isStudentCompletelyEmpty);
+  if(dest<0){showToastMsg("⚠️ الفصل الهدف ممتلئ",true);return;}
+  var studentCopy=normalizeStudent(JSON.parse(JSON.stringify(src)));
+  makeSafeSnapshot(true);
+  target[dest]=studentCopy; state.classes[currentClass].students[srcIdx]=emptyStudent();
+  if(!save(false)){ target[dest]=emptyStudent(); state.classes[currentClass].students[srcIdx]=studentCopy; showToastMsg("⚠️ تعذر النقل؛ أعيد الطالب لمكانه",true); return; }
+  document.getElementById("transferStudentModal").classList.remove("open"); selectedRows={}; renderAll();
+  showToastMsg("✓ تم نقل "+studentCopy.name+" مع جميع درجاته",false);
+};
 
 /* ============ الإحصائيات ============ */
 function updateStats(){
@@ -1806,6 +1884,14 @@ document.getElementById("applyImportNamesBtn").onclick=function(){
 };
 
 /* ============ النسخ الاحتياطي (داخل الإعدادات) ============ */
+document.getElementById("restoreSafeBtn").onclick=function(){
+  function applySafe(raw){
+    if(!raw){showToastMsg("⚠️ لا توجد نسخة آمنة محفوظة بعد",true);return;}
+    try{ var parsed=JSON.parse(raw); openConfirm("سيتم استعادة آخر نسخة آمنة محفوظة. هل تريد المتابعة؟",function(){ state=normalizeState(parsed); selectedRows={}; save(false,true); renderAll(); document.getElementById("settingsModal").classList.remove("open"); showToastMsg("✓ تمت استعادة آخر نسخة آمنة",false); }); }catch(e){showToastMsg("⚠️ تعذر قراءة النسخة الآمنة",true);}
+  }
+  var local=null; try{local=localStorage.getItem(LAST_GOOD_KEY);}catch(e){}
+  if(local) applySafe(local); else idbGet(LAST_GOOD_KEY,applySafe);
+};
 document.getElementById("exportBackupBtn").onclick=function(){
   var blob = new Blob([JSON.stringify(persistedStateObject(), null, 2)], {type:"application/json"});
   var url = URL.createObjectURL(blob);
@@ -1830,6 +1916,7 @@ document.getElementById("importFile").addEventListener("change", function(e){
       var parsed = JSON.parse(evt.target.result);
       if(!parsed || (!parsed.classes && !parsed.semesters && !parsed.grades)){ showToastMsg("⚠️ ملف غير صالح", true); return; }
       openConfirm("سيتم استبدال جميع البيانات الحالية بالبيانات الموجودة في النسخة الاحتياطية. هل تريد المتابعة؟", function(){
+        makeSafeSnapshot(true);
         state = normalizeState(parsed);
         selectedRows = {};
         save(false);
@@ -1865,6 +1952,7 @@ document.getElementById("confirmOk").onclick=function(){
 /* ============ مسح درجات الفصل مع الاحتفاظ بالأسماء ============ */
 document.getElementById("clearClassBtn").onclick=function(){
   openConfirm("هل أنت متأكد من مسح جميع درجات هذا الفصل مع الاحتفاظ بأسماء الطلاب؟ لا يمكن التراجع إلا من نسخة احتياطية.", function(){
+    makeSafeSnapshot(true);
     var students = state.classes[currentClass].students;
     for(var i=0;i<students.length;i++){
       var name = students[i].name || "";
@@ -1881,6 +1969,7 @@ document.getElementById("clearClassBtn").onclick=function(){
 /* ============ مسح أسماء الفصل فقط مع الاحتفاظ بالدرجات ============ */
 document.getElementById("clearNamesBtn").onclick=function(){
   openConfirm("هل أنت متأكد من مسح جميع أسماء الطلاب في هذا الفصل؟ ستبقى الدرجات الموجودة في الصفوف كما هي.", function(){
+    makeSafeSnapshot(true);
     var students = state.classes[currentClass].students;
     for(var i=0;i<students.length;i++) students[i].name = "";
     selectedRows={};
