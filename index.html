@@ -594,6 +594,59 @@ var GRADE_TAB_NAME = {"الأول المتوسط":"أول متوسط","الثا�
 var SEMESTERS = ["الفصل الدراسي الأول","الفصل الدراسي الثاني"];
 var MAX_STUDENTS = 50;
 var MAX_PART_COLS = 20, MAX_HW_COLS = 20, MAX_TASK_COLS = 10, MAX_EXAM_COLS = 5;
+
+var CLOUD_API = "https://script.google.com/macros/s/AKfycbybBrvxEgmel0XjvhQkaRA5g4vKLpl8ksM9tMoIF2Pf0q26c3Wi-sR0Tn4YrqmPsIAsCw/exec";
+var CLOUD_KEY = "ALI-TRACKER-2026";
+var cloudTimer = null;
+function cloudBackup(payload){
+  clearTimeout(cloudTimer);
+  cloudTimer = setTimeout(function(){
+    try{
+      fetch(CLOUD_API, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ key: CLOUD_KEY, payload: payload })
+      });
+    }catch(e){}
+  }, 3000);
+}
+function cloudRestore(){
+  if(!confirm("سيتم استبدال البيانات الحالية بآخر نسخة محفوظة في السحابة. متابعة؟")) return;
+  var cbName = "trcb_" + Date.now();
+  var script = document.createElement("script");
+  window[cbName] = function(data){
+    try{ delete window[cbName]; }catch(e){}
+    script.remove();
+    if(!data || data.ok === false){
+      alert("تعذر الاسترجاع: " + (data && data.message || "خطأ غير معروف"));
+      return;
+    }
+    if(!data.payload){
+      alert("لا توجد نسخة سحابية محفوظة بعد.");
+      return;
+    }
+    try{
+      var parsed = JSON.parse(data.payload);
+      makeSafeSnapshot(true);
+      state = normalizeState(parsed);
+      selectedRows = {};
+      save(false, true);
+      renderAll();
+      alert("تم الاسترجاع من السحابة بنجاح.");
+    }catch(e){
+      alert("تعذرت قراءة النسخة السحابية.");
+    }
+  };
+  script.onerror = function(){
+    alert("تعذر الاتصال بالخادم.");
+    script.remove();
+  };
+  script.src = CLOUD_API + "?action=load&key=" + encodeURIComponent(CLOUD_KEY) + "&callback=" + cbName;
+  document.body.appendChild(script);
+}
+window.cloudRestore = cloudRestore;
+
 function filledBlankArray(len){ var a=[]; for(var i=0;i<len;i++) a.push(""); return a; }
 function defaultColumnConfig(){ return {participation:10, homework:10, tasks:4, exams:2}; }
 function clampInt(v,min,max,def){ var n=parseInt(v,10); if(isNaN(n)) n=def; return Math.max(min,Math.min(max,n)); }
@@ -841,6 +894,7 @@ function save(showToast, allowEmpty){
     else showToastMsg("⚠️ تعذر التأكد من الحفظ المحلي - تم تشغيل النسخة الاحتياطية",true);
   }catch(e){ showToastMsg("⚠️ تعذر الحفظ المحلي - ستتم محاولة النسخة الاحتياطية الداخلية",true); }
   idbSet(STORAGE_KEY,payload);
+  if(stats.names>0 || stats.scored>0) cloudBackup(payload);
   return localOk;
 }
 
@@ -2589,6 +2643,18 @@ document.addEventListener("DOMContentLoaded", ()=>{
   if(f) f.addEventListener("change", ()=>restoreOneDriveBackupV22(f.files && f.files[0]));
 });
 
+document.addEventListener("DOMContentLoaded", function(){
+  var btn = document.createElement("button");
+  btn.className = "abtn b-install";
+  btn.id = "cloudRestoreBtn";
+  btn.textContent = "☁️ استرجاع من السحابة";
+  btn.type = "button";
+  btn.onclick = cloudRestore;
+  var installBtnEl = document.getElementById("installBtn");
+  if(installBtnEl && installBtnEl.parentNode){
+    installBtnEl.parentNode.insertBefore(btn, installBtnEl.nextSibling);
+  }
+});
 
 /* v22.1 header-name-size */
 (function(){
