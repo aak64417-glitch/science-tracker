@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#0b1526">
+<title>سجل متابعة العلوم - الفترتان</title>
+<style>
+html,body{margin:0;min-height:100%;font-family:"Segoe UI",Tahoma,Arial,sans-serif;background:#0b1526;color:#fff}
+.loader{min-height:100vh;display:grid;place-items:center;padding:24px;text-align:center}
+.card{max-width:620px;background:#13213a;border:1px solid #33456a;border-radius:18px;padding:24px;box-shadow:0 16px 50px #0007}
+.card h1{margin:0 0 12px;color:#f2c14e}.card p{line-height:1.8;color:#dbe4f2;margin:6px 0}.err{color:#ffd0d0}
+</style>
+</head>
+<body>
+<div class="loader" id="loader">
+  <div class="card">
+    <h1>سجل متابعة العلوم - الفترتان</h1>
+    <p>جاري تحميل النسخة المعتمدة بالفترة الأولى والثانية...</p>
+    <p>تم بناء هذه النسخة على الإصدار الذي تم اختباره واعتماده.</p>
+  </div>
+</div>
+
+<script>
+(async function(){
+"use strict";
+
+var ORIGINAL_KEY = "st_track_v1";
+var TEST_KEY = "st_track_v1_periods_test_v2";
+var ACTIVE_PERIOD_KEY = "st_track_periods_test_active_v2";
+
+/* عند أول فتح فقط: ننشئ نسخة مستقلة من بيانات السجل الأصلي.
+   لا نكتب مطلقًا في ORIGINAL_KEY. */
+try{
+  if(!localStorage.getItem(TEST_KEY)){
+    var originalRaw = localStorage.getItem(ORIGINAL_KEY);
+    if(originalRaw) localStorage.setItem(TEST_KEY, originalRaw);
+  }
+}catch(e){}
+
+var res = await fetch("./index-core-v22-before-periods.html?core=20260925", {cache:"no-store"});
+if(!res.ok) throw new Error("تعذر تحميل السجل الأصلي.");
+var app = await res.text();
+
+var failures = [];
+function replaceOnce(oldText,newText,label){
+  if(app.indexOf(oldText) === -1){
+    failures.push(label);
+    return;
+  }
+  app = app.replace(oldText,newText);
+}
+function replaceRegex(rx,newText,label){
+  if(!rx.test(app)){
+    failures.push(label);
+    return;
+  }
+  app = app.replace(rx,newText);
+}
+
+/* 1) عزل التخزين والسحابة عن السجل الأصلي */
+replaceOnce(
+  'var STORAGE_KEY = "st_track_v1";',
+  'var STORAGE_KEY = "'+TEST_KEY+'";\nvar ACTIVE_PERIOD_KEY = "'+ACTIVE_PERIOD_KEY+'";\nvar ACTIVE_PERIOD = (function(){ try{return localStorage.getItem(ACTIVE_PERIOD_KEY)==="2"?"2":"1";}catch(e){return "1";} })();',
+  "مفتاح التخزين"
+);
+replaceOnce('var DATA_VERSION = 5;','var DATA_VERSION = 6;',"إصدار البيانات");
+replaceOnce('var CLOUD_KEY = "ALI-TRACKER-2026";','var CLOUD_KEY = "ALI-TRACKER-2026-PERIODS-TEST-V2";',"مفتاح السحابة");
+
+/* 2) إضافة اختيار الفترة مباشرة داخل الترويسة الأصلية */
+replaceOnce(
+`    <div class="info-item">الصف:
+      <select id="gradeSelect">`,
+`    <div class="info-item">الفترة:
+      <select id="periodSelect">
+        <option value="1">الفترة الأولى</option>
+        <option value="2">الفترة الثانية</option>
+      </select>
+    </div>
+    <div class="info-item">الصف:
+      <select id="gradeSelect">`,
+  "واجهة اختيار الفترة"
+);
+
+/* 3) الطالب الواحد يحتفظ بالاسم نفسه، بينما الدرجات مستقلة لكل فترة */
+replaceRegex(
+/function emptyStudent\(\)\{[\s\S]*?\n\}\nfunction defaultMeta\(\)\{/,
+`function blankPeriodScores(){
+  return { p:filledBlankArray(MAX_PART_COLS), h:filledBlankArray(MAX_HW_COLS), t:filledBlankArray(MAX_TASK_COLS), exams:filledBlankArray(MAX_EXAM_COLS) };
+}
+function normalizePeriodScores(ps){
+  ps=ps||{};
+  return {
+    p:normalizeArray(ps.p,MAX_PART_COLS),
+    h:normalizeArray(ps.h,MAX_HW_COLS),
+    t:normalizeArray(ps.t,MAX_TASK_COLS),
+    exams:normalizeArray(ps.exams,MAX_EXAM_COLS)
+  };
+}
+function attachPeriodAccessors(st){
+  Object.defineProperties(st,{
+    p:{enumerable:false,configurable:true,get:function(){return this.periods[ACTIVE_PERIOD].p;},set:function(v){this.periods[ACTIVE_PERIOD].p=normalizeArray(v,MAX_PART_COLS);}},
+    h:{enumerable:false,configurable:true,get:function(){return this.periods[ACTIVE_PERIOD].h;},set:function(v){this.periods[ACTIVE_PERIOD].h=normalizeArray(v,MAX_HW_COLS);}},
+    t:{enumerable:false,configurable:true,get:function(){return this.periods[ACTIVE_PERIOD].t;},set:function(v){this.periods[ACTIVE_PERIOD].t=normalizeArray(v,MAX_TASK_COLS);}},
+    exams:{enumerable:false,configurable:true,get:function(){return this.periods[ACTIVE_PERIOD].exams;},set:function(v){this.periods[ACTIVE_PERIOD].exams=normalizeArray(v,MAX_EXAM_COLS);}}
+  });
+  return st;
+}
+function emptyStudent(){
+  return attachPeriodAccessors({name:"",periods:{"1":blankPeriodScores(),"2":blankPeriodScores()}});
+}
+function defaultMeta(){`,
+  "تهيئة بيانات الفترات"
+);
+
+replaceRegex(
+/function normalizeStudent\(s\)\{[\s\S]*?\n\}\nfunction createEmptyClasses\(\)\{/,
+`function normalizeStudent(s){
+  s=s||{};
+  var name=(s.name===null || s.name===undefined) ? "" : String(s.name);
+  var periods;
+  if(s.periods && typeof s.periods==="object"){
+    periods={
+      "1":normalizePeriodScores(s.periods["1"]),
+      "2":normalizePeriodScores(s.periods["2"])
+    };
+  }else{
+    var legacyExams=Array.isArray(s.exams) ? s.exams : [s.e1,s.e2];
+    periods={
+      "1":{
+        p:normalizeArray(s.p,MAX_PART_COLS),
+        h:normalizeArray(s.h,MAX_HW_COLS),
+        t:normalizeArray(s.t,MAX_TASK_COLS),
+        exams:normalizeArray(legacyExams,MAX_EXAM_COLS)
+      },
+      "2":blankPeriodScores()
+    };
+  }
+  return attachPeriodAccessors({name:name,periods:periods});
+}
+function createEmptyClasses(){`,
+  "ترحيل بيانات الطلاب"
+);
+
+/* 4) الإحصاءات الداخلية تتعرّف على درجات الفترتين عند فحص النسخ الآمنة */
+replaceRegex(
+/function payloadStats\(obj\)\{[\s\S]*?\n\}\nfunction rememberGoodPayload\(payload\)\{/,
+`function payloadStats(obj){
+  var names=0,scored=0;
+  try{
+    var grades=obj && obj.grades ? obj.grades : {};
+    Object.keys(grades).forEach(function(g){Object.keys(grades[g]||{}).forEach(function(sem){Object.keys(grades[g][sem]||{}).forEach(function(cls){
+      ((grades[g][sem][cls]||{}).students||[]).forEach(function(st){
+        if(st && String(st.name||"").trim()) names++;
+        if(st && st.periods){
+          ["1","2"].forEach(function(pk){
+            var ps=st.periods[pk]||{};
+            [ps.p,ps.h,ps.t,ps.exams].forEach(function(a){if(Array.isArray(a)) a.forEach(function(v){if(v!==null&&v!==undefined&&String(v).trim()!=="") scored++;});});
+          });
+        }else{
+          [st&&st.p,st&&st.h,st&&st.t,st&&st.exams].forEach(function(a){if(Array.isArray(a)) a.forEach(function(v){if(v!==null&&v!==undefined&&String(v).trim()!=="") scored++;});});
+        }
+      });
+    });});});
+  }catch(e){}
+  return {names:names,scored:scored};
+}
+function rememberGoodPayload(payload){`,
+  "فحص النسخ الآمنة"
+);
+
+/* المقعد الفارغ = فارغ في الفترتين، حتى لا تضيع درجة موجودة في الفترة الأخرى */
+replaceRegex(
+/function isStudentCompletelyEmpty\(s\)\{[\s\S]*?\n\}/,
+`function isStudentCompletelyEmpty(s){
+  if(!s) return true;
+  var blank=function(v){return v===null || v===undefined || String(v).trim()==="";};
+  if(!blank(s.name)) return false;
+  if(s.periods){
+    var keys=["1","2"];
+    for(var k=0;k<keys.length;k++){
+      var ps=s.periods[keys[k]]||{};
+      var arrays=[ps.p||[],ps.h||[],ps.t||[],ps.exams||[]];
+      for(var a=0;a<arrays.length;a++) for(var j=0;j<arrays[a].length;j++) if(!blank(arrays[a][j])) return false;
+    }
+    return true;
+  }
+  return s.p.every(blank)&&s.h.every(blank)&&s.t.every(blank)&&s.exams.every(blank);
+}`,
+  "حماية المقعد الفارغ"
+);
+
+/* حذف عمود تقييم يطبّق على الفترتين لأن عدد الأعمدة إعداد مشترك */
+replaceRegex(
+/var\s+arr\s*=\s*s\[meta\.arr\]\s*;\s*if\s*\(\s*!Array\.isArray\(arr\)\s*\)\s*return\s*;\s*arr\.splice\(\s*idx\s*,\s*1\s*\)\s*;\s*arr\.push\(\s*""\s*\)\s*;/,
+`["1","2"].forEach(function(pk){
+            var arr=s.periods && s.periods[pk] ? s.periods[pk][meta.arr] : null;
+            if(!Array.isArray(arr)) return;
+            arr.splice(idx,1);
+            arr.push("");
+          });`,
+  "حذف عمود التقييم"
+);
+
+/* مسح الدرجات: يمسح الفترة النشطة فقط، ويحافظ على الفترة الأخرى */
+replaceOnce(
+`    for(var i=0;i<students.length;i++){
+      var name = students[i].name || "";
+      students[i] = emptyStudent();
+      students[i].name = name;
+    }`,
+`    for(var i=0;i<students.length;i++){
+      students[i].p = filledBlankArray(MAX_PART_COLS);
+      students[i].h = filledBlankArray(MAX_HW_COLS);
+      students[i].t = filledBlankArray(MAX_TASK_COLS);
+      students[i].exams = filledBlankArray(MAX_EXAM_COLS);
+    }`,
+  "مسح درجات الفترة"
+);
+
+/* 5) إبقاء محدد الفترة متزامنًا مع الواجهة */
+replaceOnce(
+`  document.getElementById("semesterSelect").value = state.meta.semester;`,
+`  document.getElementById("semesterSelect").value = state.meta.semester;
+  var periodSelectEl=document.getElementById("periodSelect");
+  if(periodSelectEl) periodSelectEl.value=ACTIVE_PERIOD;`,
+  "تزامن اختيار الفترة"
+);
+
+/* 6) حدث الانتقال بين الفترتين */
+replaceOnce(
+`/* ============ التحكم بحجم خط الجدول ============ */`,
+`/* ============ الفترة: درجات مستقلة مع قائمة طلاب مشتركة ============ */
+document.getElementById("periodSelect").addEventListener("change",function(e){
+  save(false);
+  ACTIVE_PERIOD=(e.target.value==="2")?"2":"1";
+  try{localStorage.setItem(ACTIVE_PERIOD_KEY,ACTIVE_PERIOD);}catch(err){}
+  selectedRows={};
+  renderAll();
+  showToastMsg("✓ تم الانتقال إلى "+(ACTIVE_PERIOD==="2"?"الفترة الثانية":"الفترة الأولى")+" ببيانات درجات مستقلة",false);
+});
+
+/* ============ التحكم بحجم خط الجدول ============ */`,
+  "حدث الانتقال بين الفترات"
+);
+
+/* عنوان النسخة المعتمدة */
+replaceOnce(
+`<title>سجل متابعة العلوم - لوحة التحليل - v22</title>`,
+`<title>سجل متابعة العلوم - الفترتان</title>`,
+  "عنوان النسخة"
+);
+
+if(failures.length){
+  throw new Error("تم إيقاف التحميل بأمان لأن بعض نقاط المطابقة تغيرت في السجل الأصلي: "+failures.join("، "));
+}
+
+/* نكتب النسخة المعتمدة داخل هذه الصفحة */
+document.open();
+document.write(app);
+document.close();
+
+})().catch(function(err){
+  var box=document.getElementById("loader");
+  if(box){
+    box.innerHTML='<div class="card"><h1>تم إيقاف التحميل بأمان</h1><p class="err">'+
+      String(err && err.message || err)+'</p><p>لم يتم إجراء أي تغيير على البيانات الأصلية.</p></div>';
+  }
+});
+</script>
+</body>
+</html>
