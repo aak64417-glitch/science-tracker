@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#0b1526">
+<title>سجل متابعة العلوم - الفترات</title>
+<style>
+html,body{margin:0;min-height:100%;font-family:"Segoe UI",Tahoma,Arial,sans-serif;background:#0b1526;color:#fff}
+.loader{min-height:100vh;display:grid;place-items:center;text-align:center;padding:24px;box-sizing:border-box}
+.card{max-width:520px;background:#13213a;border:1px solid #33456a;border-radius:18px;padding:24px;box-shadow:0 16px 50px #0006}
+.card h1{margin:0 0 10px;color:#f2c14e}
+.card p{margin:0;line-height:1.8;color:#d9dee7}
+.err{color:#ffd7d7}
+</style>
+</head>
+<body>
+<div class="loader" id="loader">
+  <div class="card">
+    <h1>سجل متابعة العلوم</h1>
+    <p>جاري فتح السجل وتجهيز الفترة المحددة...</p>
+  </div>
+</div>
+
+<script>
+(async function(){
+  "use strict";
+
+  var ACTIVE_PERIOD_KEY = "science_tracker_active_period";
+  var PERIOD1_KEY = "st_track_v1";
+  var PERIOD2_KEY = "st_track_v1_period2";
+
+  var period = localStorage.getItem(ACTIVE_PERIOD_KEY);
+  if(period !== "2") period = "1";
+
+  function clearScoresKeepNames(obj){
+    try{
+      var grades = obj && obj.grades ? obj.grades : {};
+      Object.keys(grades).forEach(function(g){
+        Object.keys(grades[g] || {}).forEach(function(sem){
+          Object.keys(grades[g][sem] || {}).forEach(function(cls){
+            var students = ((grades[g][sem][cls] || {}).students || []);
+            students.forEach(function(st){
+              if(!st) return;
+              if(Array.isArray(st.p)) st.p = st.p.map(function(){ return ""; });
+              if(Array.isArray(st.h)) st.h = st.h.map(function(){ return ""; });
+              if(Array.isArray(st.t)) st.t = st.t.map(function(){ return ""; });
+              if(Array.isArray(st.exams)) st.exams = st.exams.map(function(){ return ""; });
+              if(Object.prototype.hasOwnProperty.call(st, "e1")) st.e1 = "";
+              if(Object.prototype.hasOwnProperty.call(st, "e2")) st.e2 = "";
+            });
+          });
+        });
+      });
+    }catch(e){}
+    return obj;
+  }
+
+  if(period === "2" && !localStorage.getItem(PERIOD2_KEY)){
+    var p1 = localStorage.getItem(PERIOD1_KEY);
+    if(p1){
+      try{
+        var cloned = clearScoresKeepNames(JSON.parse(p1));
+        localStorage.setItem(PERIOD2_KEY, JSON.stringify(cloned));
+      }catch(e){}
+    }
+  }
+
+  var response = await fetch("./index.html?period-core=stable2", {cache:"no-store"});
+  if(!response.ok) throw new Error("تعذر تحميل السجل الأساسي");
+  var html = await response.text();
+
+  var storageKey = (period === "2") ? PERIOD2_KEY : PERIOD1_KEY;
+  var cloudKey   = (period === "2") ? "ALI-TRACKER-2026-P2" : "ALI-TRACKER-2026";
+
+  html = html.replace('var STORAGE_KEY = "st_track_v1";', 'var STORAGE_KEY = "'+storageKey+'";');
+  html = html.replace('var CLOUD_KEY = "ALI-TRACKER-2026";', 'var CLOUD_KEY = "'+cloudKey+'";');
+
+  var injected = '<script>(function(){'
+    + '"use strict";'
+    + 'function currentPeriodValue(){try{var v=localStorage.getItem("'+ACTIVE_PERIOD_KEY+'");return v==="2"?"2":"1";}catch(e){return "1";}}'
+    + 'function currentPeriodLabel(){return currentPeriodValue()==="2"?"الفترة الثانية":"الفترة الأولى";}'
+    + 'function savePeriod(v){try{localStorage.setItem("'+ACTIVE_PERIOD_KEY+'",v==="2"?"2":"1");}catch(e){}}'
+    + 'function buildPeriodItem(){var wrapper=document.createElement("div");wrapper.className="info-item";wrapper.id="periodInfoItem";wrapper.innerHTML='الفترة: <select id="periodSelect"><option value="1">الفترة الأولى</option><option value="2">الفترة الثانية</option></select>';return wrapper;}'
+    + 'function applyPeriodUi(){try{'
+    + 'var infoBar=document.querySelector(".info-bar");'
+    + 'var gradeSelect=document.getElementById("gradeSelect");'
+    + 'var semesterSelect=document.getElementById("semesterSelect");'
+    + 'if(infoBar && !document.getElementById("periodInfoItem")){'
+    + 'var item=buildPeriodItem();'
+    + 'if(gradeSelect && gradeSelect.closest(".info-item")){infoBar.insertBefore(item,gradeSelect.closest(".info-item"));}'
+    + 'else if(semesterSelect && semesterSelect.closest(".info-item")){infoBar.insertBefore(item,semesterSelect.closest(".info-item"));}'
+    + 'else{infoBar.appendChild(item);}'
+    + '}'
+    + 'var sel=document.getElementById("periodSelect");'
+    + 'if(sel){var desired=currentPeriodValue();if(sel.value!==desired) sel.value=desired;'
+    + 'if(!sel.dataset.bound){sel.dataset.bound="1";sel.addEventListener("change",function(){savePeriod(this.value);setTimeout(function(){location.reload();},80);});}}'
+    + 'var subRow=document.querySelector(".sub-row");'
+    + 'if(subRow){var old=document.getElementById("periodBadgeText");if(old) old.remove();var badge=document.createElement("span");badge.className="dot";badge.id="periodBadgeText";badge.textContent="• "+currentPeriodLabel();subRow.appendChild(badge);}'
+    + 'document.title="سجل متابعة مادة العلوم - "+currentPeriodLabel();'
+    + '}catch(e){}}'
+    + 'var tries=0;var timer=setInterval(function(){applyPeriodUi();tries++;if(document.getElementById("periodSelect")||tries>60){clearInterval(timer);}},250);'
+    + 'if(document.readyState==="complete"||document.readyState==="interactive"){setTimeout(applyPeriodUi,50);setTimeout(applyPeriodUi,300);setTimeout(applyPeriodUi,800);}'
+    + 'else{document.addEventListener("DOMContentLoaded",function(){setTimeout(applyPeriodUi,50);setTimeout(applyPeriodUi,300);setTimeout(applyPeriodUi,800);});}'
+    + '})();<\/script>';
+
+  html = html.replace("</body>", injected + "</body>");
+
+  document.open();
+  document.write(html);
+  document.close();
+
+})().catch(function(err){
+  var box = document.getElementById("loader");
+  if(box){
+    box.innerHTML = '<div class="card"><h1>تعذر فتح السجل</h1><p class="err">'+ String(err && err.message || err) +'</p><p style="margin-top:12px">استبدل ملف periods.html الحالي بهذه النسخة المصححة فقط.</p></div>';
+  }
+});
+</script>
+</body>
+</html>
