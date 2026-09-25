@@ -10,7 +10,7 @@
 <!-- manifest disabled in isolated test -->
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>سجل متابعة العلوم - اختبار الفترتين المستقل</title>
+<title>سجل متابعة العلوم - اختبار الفترتين المستقل - restore2</title>
 <style>
   :root{
     --navy:#0b1526; --navy2:#0f1e35;
@@ -1946,6 +1946,26 @@ document.getElementById("applyImportNamesBtn").onclick=function(){
   }
 };
 
+
+/* ===== توافق موسع مع النسخ الاحتياطية القديمة والجديدة ===== */
+function unwrapBackupObject(obj){
+  var current=obj;
+  for(var i=0;i<4;i++){
+    if(typeof current==="string"){
+      current=JSON.parse(current);
+      continue;
+    }
+    if(current && typeof current==="object" && Object.prototype.hasOwnProperty.call(current,"payload")){
+      current=current.payload;
+      continue;
+    }
+    break;
+  }
+  if(!current || typeof current!=="object") throw new Error("ملف النسخة غير صالح");
+  if(!current.grades && !current.semesters && !current.classes) throw new Error("لا توجد بيانات سجل معروفة داخل النسخة");
+  return current;
+}
+
 /* ============ النسخ الاحتياطي (داخل الإعدادات) ============ */
 document.getElementById("restoreSafeBtn").onclick=function(){
   function applySafe(raw){
@@ -1977,21 +1997,33 @@ document.getElementById("importFile").addEventListener("change", function(e){
   reader.onload = function(evt){
     try{
       var parsed = JSON.parse(evt.target.result);
-      if(!parsed || (!parsed.classes && !parsed.semesters && !parsed.grades)){ showToastMsg("⚠️ ملف غير صالح", true); return; }
-      openConfirm("سيتم استبدال جميع البيانات الحالية بالبيانات الموجودة في النسخة الاحتياطية. هل تريد المتابعة؟", function(){
-        makeSafeSnapshot(true);
-        state = normalizeState(parsed);
-        selectedRows = {};
-        save(false);
-        renderAll();
-        document.getElementById("settingsModal").classList.remove("open");
-        showToastMsg("✓ تم استيراد النسخة الاحتياطية بنجاح", false);
+      var incoming = unwrapBackupObject(parsed);
+      openConfirm("سيتم استيراد النسخة إلى السجل التجريبي. بيانات النسخة القديمة ستوضع في الفترة الأولى، وستبقى الفترة الثانية بدرجات مستقلة. هل تريد المتابعة؟", function(){
+        try{
+          makeSafeSnapshot(true);
+          ACTIVE_PERIOD="1";
+          try{ localStorage.setItem(ACTIVE_PERIOD_KEY,"1"); }catch(ignore){}
+          state = normalizeState(incoming);
+          selectedRows = {};
+          var ok = save(false,true);
+          if(ok===false) throw new Error("تعذر حفظ البيانات المستوردة");
+          renderAll();
+          document.getElementById("settingsModal").classList.remove("open");
+          showToastMsg("✓ تمت استعادة النسخة في الفترة الأولى بنجاح", false);
+        }catch(innerErr){
+          console.error("restore failed",innerErr);
+          alert("تعذر استعادة النسخة: "+(innerErr && innerErr.message ? innerErr.message : innerErr));
+        }
       });
     }catch(err){
-      showToastMsg("⚠️ تعذر قراءة الملف", true);
+      console.error("backup parse failed",err);
+      alert("تعذر قراءة النسخة الاحتياطية: "+(err && err.message ? err.message : err));
     }
   };
-  reader.readAsText(file);
+  reader.onerror=function(){
+    alert("تعذر قراءة ملف النسخة الاحتياطية من الجهاز.");
+  };
+  reader.readAsText(file,"UTF-8");
   e.target.value="";
 });
 
@@ -2671,20 +2703,22 @@ async function restoreOneDriveBackupV22(file){
   try{
     const raw = await file.text();
     const wrapper = JSON.parse(raw);
-    const incoming = wrapper && wrapper.payload ? wrapper.payload : wrapper;
-    if(!incoming || typeof incoming !== "object") throw new Error("ملف النسخة غير صالح");
+    const incoming = unwrapBackupObject(wrapper);
 
-    if(!confirm("سيتم استبدال بيانات السجل الحالية ببيانات النسخة المختارة. هل تريد المتابعة؟")) return;
+    if(!confirm("سيتم استبدال بيانات السجل التجريبي ببيانات النسخة المختارة. هل تريد المتابعة؟")) return;
 
     try { makeSafeSnapshot(true); } catch(e) {}
-    data = normalizeData(incoming);
-    const ok = save(true, true);
+    ACTIVE_PERIOD="1";
+    try{ localStorage.setItem(ACTIVE_PERIOD_KEY,"1"); }catch(e){}
+    state = normalizeState(incoming);
+    selectedRows = {};
+    const ok = save(false,true);
     if(ok === false) throw new Error("تعذر حفظ البيانات المستعادة");
-    render();
-    if(typeof toast === "function") toast("♻️ تمت استعادة نسخة OneDrive بنجاح");
+    renderAll();
+    showToastMsg("✓ تمت استعادة النسخة بنجاح في الفترة الأولى",false);
   }catch(err){
     console.error(err);
-    alert("تعذر استعادة النسخة: " + (err?.message || err));
+    alert("تعذر استعادة النسخة: " + (err && err.message ? err.message : err));
   }finally{
     const inp = document.getElementById("oneDriveRestoreFile");
     if(inp) inp.value = "";
