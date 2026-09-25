@@ -38,7 +38,7 @@ try{
   }
 }catch(e){}
 
-var res = await fetch("./index.html?periods-test-core=20260925e", {cache:"no-store"});
+var res = await fetch("./index.html?periods-test-core=20260925f", {cache:"no-store"});
 if(!res.ok) throw new Error("تعذر تحميل السجل الأصلي.");
 var app = await res.text();
 
@@ -219,16 +219,16 @@ replaceOnce(
 );
 
 
-/* 4.5) تصدير Excel من القيم الظاهرة فعليًا في جدول السجل */
+/* 4.5) تصدير Excel/CSV من الجدول الظاهر خلية بخليّة */
 replaceRegex(
 /\/\* ============ تصدير Excel ============ \*\/[\s\S]*?\/\* ============ الطباعة في صفحة A4 أفقية واحدة بدون تدوير ============ \*\//,
-`/* ============ تصدير Excel ============ */
+`/* ============ تصدير Excel/CSV ============ */
 document.getElementById("exportExcelBtn").onclick=function(){
-  var cls = state.classes[currentClass], c=cfg();
+  var c=cfg();
   var periodLabel = ACTIVE_PERIOD==="2" ? "الفترة الثانية" : "الفترة الأولى";
   var periodFile = ACTIVE_PERIOD==="2" ? "الفترة_الثانية" : "الفترة_الأولى";
 
-  var headers = ["الرقم","اسم الطالب"];
+  var headers=["الرقم","اسم الطالب"];
   for(var i=1;i<=c.participation;i++) headers.push("مشاركة "+i);
   headers.push("مجموع المشاركة /10");
   for(var i=1;i<=c.homework;i++) headers.push("واجب "+i);
@@ -238,69 +238,75 @@ document.getElementById("exportExcelBtn").onclick=function(){
   for(var i=1;i<=c.exams;i++) headers.push("اختبار "+i+" /20");
   headers.push("درجة الفترة /20","المجموع الكلي /60");
 
-  function domScore(idx,kind,sub,fallback){
-    var el=document.querySelector('.score-input[data-idx="'+idx+'"][data-kind="'+kind+'"][data-sub="'+sub+'"]');
-    if(el) return el.value;
-    return (fallback===null || fallback===undefined) ? "" : fallback;
-  }
-  function excelVal(v){
-    return (v===null || v===undefined || v==="") ? "" : v;
+  function csvCell(v){
+    var s=String(v===null||v===undefined?"":v);
+    return '"'+s.replace(/"/g,'""')+'"';
   }
 
-  var rows = "<tr>"+headers.map(function(h){return "<th>"+h+"</th>";}).join("")+"</tr>";
+  var rows=[headers];
+  var trs=document.querySelectorAll("#tableBody tr");
 
-  cls.students.forEach(function(s, idx){
-    if(!s.name || s.name.trim()==="") return;
+  trs.forEach(function(tr){
+    var nameInput=tr.querySelector("input.name-input");
+    var name=nameInput ? nameInput.value.trim() : "";
+    if(!name) return;
 
-    var ps = (s.periods && s.periods[ACTIVE_PERIOD]) ? s.periods[ACTIVE_PERIOD] : {
-      p:s.p||[], h:s.h||[], t:s.t||[], exams:s.exams||[]
-    };
+    var idx=parseInt(tr.dataset.row,10);
+    if(isNaN(idx)){
+      var firstScore=tr.querySelector(".score-input");
+      idx=firstScore ? parseInt(firstScore.dataset.idx,10) : rows.length-1;
+    }
 
-    var pVals=[],hVals=[],tVals=[],eVals=[];
-    for(var i=0;i<c.participation;i++) pVals.push(domScore(idx,"p",i,ps.p[i]));
-    for(var i=0;i<c.homework;i++) hVals.push(domScore(idx,"h",i,ps.h[i]));
-    for(var i=0;i<c.tasks;i++) tVals.push(domScore(idx,"t",i,ps.t[i]));
-    for(var i=0;i<c.exams;i++) eVals.push(domScore(idx,"e",i,ps.exams[i]));
+    var row=[idx+1,name];
 
-    var pSum=weightedSectionScore(pVals,c.participation,1,10);
-    var hSum=weightedSectionScore(hVals,c.homework,1,10);
-    var tSum=weightedSectionScore(tVals,c.tasks,5,20);
-    var eMax=0;
-    for(var i=0;i<eVals.length;i++) eMax=Math.max(eMax,num(eVals[i]));
-    eMax=Math.min(20,eMax);
-    var total=Math.round((pSum+hSum+tSum+eMax+Number.EPSILON)*100)/100;
+    function groupVals(kind,count){
+      for(var j=0;j<count;j++){
+        var el=tr.querySelector('.score-input[data-kind="'+kind+'"][data-sub="'+j+'"]');
+        row.push(el ? el.value : "");
+      }
+    }
 
-    var cells=[idx+1, escapeHTML(s.name)];
-    pVals.forEach(function(v){cells.push(excelVal(v));});
-    cells.push(fmtScore(pSum));
-    hVals.forEach(function(v){cells.push(excelVal(v));});
-    cells.push(fmtScore(hSum));
-    tVals.forEach(function(v){cells.push(excelVal(v));});
-    cells.push(fmtScore(tSum));
-    eVals.forEach(function(v){cells.push(excelVal(v));});
-    cells.push(fmtScore(eMax),fmtScore(total));
+    groupVals("p",c.participation);
+    var pSum=document.getElementById("sum-p-"+idx);
+    row.push(pSum ? pSum.textContent.trim() : "");
 
-    rows += "<tr>"+cells.map(function(v){return "<td>"+v+"</td>";}).join("")+"</tr>";
+    groupVals("h",c.homework);
+    var hSum=document.getElementById("sum-h-"+idx);
+    row.push(hSum ? hSum.textContent.trim() : "");
+
+    groupVals("t",c.tasks);
+    var tSum=document.getElementById("sum-t-"+idx);
+    row.push(tSum ? tSum.textContent.trim() : "");
+
+    groupVals("e",c.exams);
+    var eSum=document.getElementById("max-e-"+idx);
+    row.push(eSum ? eSum.textContent.trim() : "");
+
+    var total=document.getElementById("total-"+idx);
+    row.push(total ? total.textContent.trim() : "");
+
+    rows.push(row);
   });
 
-  var title = "سجل "+fullClassDisplay(currentClass)+" - "+periodLabel+" - "+(state.meta.semester||"")+" "+(state.meta.year||"");
-  var html = "<html dir='rtl'><head><meta charset='UTF-8'></head><body>"+
-    "<h3>"+title+"</h3><table border='1'>"+rows+"</table></body></html>";
+  var metaRow=["الفترة",periodLabel,"الفصل",fullClassDisplay(currentClass),"الفصل الدراسي",state.meta.semester||"","العام",state.meta.year||""];
+  var csv=[metaRow,[]].concat(rows).map(function(r){
+    return r.map(csvCell).join(",");
+  }).join("\r\n");
 
-  var blob = new Blob(["\ufeff"+html], {type:"application/vnd.ms-excel"});
-  var url = URL.createObjectURL(blob);
+  var blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
+  var url=URL.createObjectURL(blob);
   var a=document.createElement("a");
   a.href=url;
-  a.download="سجل_"+gradeTabName().replace(/\s/g,"_")+"_"+classDisplay(currentClass).replace("/","-")+"_"+periodFile+".xls";
+  a.download="سجل_"+gradeTabName().replace(/\s/g,"_")+"_"+classDisplay(currentClass).replace("/","-")+"_"+periodFile+".csv";
   document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
-  setTimeout(function(){ URL.revokeObjectURL(url); }, 2500);
-  showToastMsg("✓ تم تصدير Excel من القيم الظاهرة - "+periodLabel, false);
+  a.remove();
+  setTimeout(function(){URL.revokeObjectURL(url);},3000);
+  showToastMsg("✓ تم تصدير ملف متوافق مع Excel - "+periodLabel,false);
 };
 
 /* ============ الطباعة في صفحة A4 أفقية واحدة بدون تدوير ============ */`,
-  "تصدير Excel من الجدول"
+  "تصدير CSV من الجدول"
 );
 
 /* 5) إبقاء محدد الفترة متزامنًا مع الواجهة */
