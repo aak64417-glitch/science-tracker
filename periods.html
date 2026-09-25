@@ -9,9 +9,7 @@
 html,body{margin:0;min-height:100%;font-family:"Segoe UI",Tahoma,Arial,sans-serif;background:#0b1526;color:#fff}
 .loader{min-height:100vh;display:grid;place-items:center;text-align:center;padding:24px;box-sizing:border-box}
 .card{max-width:520px;background:#13213a;border:1px solid #33456a;border-radius:18px;padding:24px;box-shadow:0 16px 50px #0006}
-.card h1{margin:0 0 10px;color:#f2c14e}
-.card p{margin:0;line-height:1.8;color:#d9dee7}
-.err{color:#ffd7d7}
+.card h1{margin:0 0 10px;color:#f2c14e}.card p{margin:0;line-height:1.8;color:#d9dee7}.err{color:#ffd7d7}
 </style>
 </head>
 <body>
@@ -46,8 +44,8 @@ html,body{margin:0;min-height:100%;font-family:"Segoe UI",Tahoma,Arial,sans-seri
               if(Array.isArray(st.h)) st.h = st.h.map(function(){ return ""; });
               if(Array.isArray(st.t)) st.t = st.t.map(function(){ return ""; });
               if(Array.isArray(st.exams)) st.exams = st.exams.map(function(){ return ""; });
-              if(Object.prototype.hasOwnProperty.call(st, "e1")) st.e1 = "";
-              if(Object.prototype.hasOwnProperty.call(st, "e2")) st.e2 = "";
+              if(Object.prototype.hasOwnProperty.call(st,"e1")) st.e1 = "";
+              if(Object.prototype.hasOwnProperty.call(st,"e2")) st.e2 = "";
             });
           });
         });
@@ -56,64 +54,133 @@ html,body{margin:0;min-height:100%;font-family:"Segoe UI",Tahoma,Arial,sans-seri
     return obj;
   }
 
+  // أول فتح للفترة الثانية: نسخ الأسماء والإعدادات الحالية فقط مع درجات فارغة.
   if(period === "2" && !localStorage.getItem(PERIOD2_KEY)){
     var p1 = localStorage.getItem(PERIOD1_KEY);
     if(p1){
       try{
-        var cloned = clearScoresKeepNames(JSON.parse(p1));
-        localStorage.setItem(PERIOD2_KEY, JSON.stringify(cloned));
+        localStorage.setItem(PERIOD2_KEY, JSON.stringify(clearScoresKeepNames(JSON.parse(p1))));
       }catch(e){}
     }
   }
 
-  var response = await fetch("./index.html?period-core=stable2", {cache:"no-store"});
+  // نحمّل السجل الأصلي نفسه بالكامل؛ لا نعيد بناء الواجهة ولا نحذف أي ميزة.
+  var response = await fetch("./index.html?period-core=stable3", {cache:"no-store"});
   if(!response.ok) throw new Error("تعذر تحميل السجل الأساسي");
-  var html = await response.text();
+  var appHtml = await response.text();
 
-  var storageKey = (period === "2") ? PERIOD2_KEY : PERIOD1_KEY;
-  var cloudKey   = (period === "2") ? "ALI-TRACKER-2026-P2" : "ALI-TRACKER-2026";
+  var storageKey = period === "2" ? PERIOD2_KEY : PERIOD1_KEY;
+  var cloudKey = period === "2" ? "ALI-TRACKER-2026-P2" : "ALI-TRACKER-2026";
 
-  html = html.replace('var STORAGE_KEY = "st_track_v1";', 'var STORAGE_KEY = "'+storageKey+'";');
-  html = html.replace('var CLOUD_KEY = "ALI-TRACKER-2026";', 'var CLOUD_KEY = "'+cloudKey+'";');
+  // التغيير الوظيفي الوحيد: مفتاح حفظ مستقل لكل فترة.
+  appHtml = appHtml.replace(
+    'var STORAGE_KEY = "st_track_v1";',
+    'var STORAGE_KEY = "' + storageKey + '";'
+  );
+  appHtml = appHtml.replace(
+    'var CLOUD_KEY = "ALI-TRACKER-2026";',
+    'var CLOUD_KEY = "' + cloudKey + '";'
+  );
 
-  var injected = '<script>(function(){'
-    + '"use strict";'
-    + 'function currentPeriodValue(){try{var v=localStorage.getItem("'+ACTIVE_PERIOD_KEY+'");return v==="2"?"2":"1";}catch(e){return "1";}}'
-    + 'function currentPeriodLabel(){return currentPeriodValue()==="2"?"الفترة الثانية":"الفترة الأولى";}'
-    + 'function savePeriod(v){try{localStorage.setItem("'+ACTIVE_PERIOD_KEY+'",v==="2"?"2":"1");}catch(e){}}'
-    + 'function buildPeriodItem(){var wrapper=document.createElement("div");wrapper.className="info-item";wrapper.id="periodInfoItem";wrapper.innerHTML='الفترة: <select id="periodSelect"><option value="1">الفترة الأولى</option><option value="2">الفترة الثانية</option></select>';return wrapper;}'
-    + 'function applyPeriodUi(){try{'
-    + 'var infoBar=document.querySelector(".info-bar");'
-    + 'var gradeSelect=document.getElementById("gradeSelect");'
-    + 'var semesterSelect=document.getElementById("semesterSelect");'
-    + 'if(infoBar && !document.getElementById("periodInfoItem")){'
-    + 'var item=buildPeriodItem();'
-    + 'if(gradeSelect && gradeSelect.closest(".info-item")){infoBar.insertBefore(item,gradeSelect.closest(".info-item"));}'
-    + 'else if(semesterSelect && semesterSelect.closest(".info-item")){infoBar.insertBefore(item,semesterSelect.closest(".info-item"));}'
-    + 'else{infoBar.appendChild(item);}'
-    + '}'
-    + 'var sel=document.getElementById("periodSelect");'
-    + 'if(sel){var desired=currentPeriodValue();if(sel.value!==desired) sel.value=desired;'
-    + 'if(!sel.dataset.bound){sel.dataset.bound="1";sel.addEventListener("change",function(){savePeriod(this.value);setTimeout(function(){location.reload();},80);});}}'
-    + 'var subRow=document.querySelector(".sub-row");'
-    + 'if(subRow){var old=document.getElementById("periodBadgeText");if(old) old.remove();var badge=document.createElement("span");badge.className="dot";badge.id="periodBadgeText";badge.textContent="• "+currentPeriodLabel();subRow.appendChild(badge);}'
-    + 'document.title="سجل متابعة مادة العلوم - "+currentPeriodLabel();'
-    + '}catch(e){}}'
-    + 'var tries=0;var timer=setInterval(function(){applyPeriodUi();tries++;if(document.getElementById("periodSelect")||tries>60){clearInterval(timer);}},250);'
-    + 'if(document.readyState==="complete"||document.readyState==="interactive"){setTimeout(applyPeriodUi,50);setTimeout(applyPeriodUi,300);setTimeout(applyPeriodUi,800);}'
-    + 'else{document.addEventListener("DOMContentLoaded",function(){setTimeout(applyPeriodUi,50);setTimeout(applyPeriodUi,300);setTimeout(applyPeriodUi,800);});}'
-    + '})();<\/script>';
+  // نضيف واجهة اختيار الفترة فقط، بعد أن يكتمل تحميل الواجهة الأصلية.
+  var periodScript = `<script>
+(function(){
+  "use strict";
+  var ACTIVE_PERIOD_KEY = "science_tracker_active_period";
+  var activePeriod = "${period}";
 
-  html = html.replace("</body>", injected + "</body>");
+  function addPeriodControl(){
+    try{
+      var infoBar = document.querySelector(".info-bar");
+      if(!infoBar) return false;
+
+      var existing = document.getElementById("periodInfoItem");
+      if(!existing){
+        var item = document.createElement("div");
+        item.className = "info-item";
+        item.id = "periodInfoItem";
+
+        var label = document.createTextNode("الفترة: ");
+        var select = document.createElement("select");
+        select.id = "periodSelect";
+
+        var op1 = document.createElement("option");
+        op1.value = "1";
+        op1.textContent = "الفترة الأولى";
+
+        var op2 = document.createElement("option");
+        op2.value = "2";
+        op2.textContent = "الفترة الثانية";
+
+        select.appendChild(op1);
+        select.appendChild(op2);
+        item.appendChild(label);
+        item.appendChild(select);
+
+        var gradeSelect = document.getElementById("gradeSelect");
+        var gradeItem = gradeSelect && gradeSelect.closest(".info-item");
+        if(gradeItem) infoBar.insertBefore(item, gradeItem);
+        else infoBar.appendChild(item);
+      }
+
+      var periodSelect = document.getElementById("periodSelect");
+      if(periodSelect){
+        periodSelect.value = activePeriod;
+        if(!periodSelect.dataset.periodBound){
+          periodSelect.dataset.periodBound = "1";
+          periodSelect.addEventListener("change", function(){
+            localStorage.setItem(ACTIVE_PERIOD_KEY, this.value === "2" ? "2" : "1");
+            location.reload();
+          });
+        }
+      }
+
+      var oldBadge = document.getElementById("periodDisplayBadge");
+      if(oldBadge) oldBadge.remove();
+
+      var sub = document.querySelector(".sub-row");
+      if(sub){
+        var badge = document.createElement("span");
+        badge.className = "dot";
+        badge.id = "periodDisplayBadge";
+        badge.textContent = "• " + (activePeriod === "2" ? "الفترة الثانية" : "الفترة الأولى");
+        sub.appendChild(badge);
+      }
+
+      document.title = "سجل متابعة مادة العلوم - " + (activePeriod === "2" ? "الفترة الثانية" : "الفترة الأولى");
+      return true;
+    }catch(e){
+      return false;
+    }
+  }
+
+  var attempts = 0;
+  var timer = setInterval(function(){
+    attempts++;
+    if(addPeriodControl() || attempts >= 80) clearInterval(timer);
+  }, 150);
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(addPeriodControl, 20);
+    setTimeout(addPeriodControl, 250);
+    setTimeout(addPeriodControl, 800);
+  });
+})();
+<\/script>`;
+
+  appHtml = appHtml.replace("</body>", periodScript + "</body>");
 
   document.open();
-  document.write(html);
+  document.write(appHtml);
   document.close();
 
 })().catch(function(err){
   var box = document.getElementById("loader");
   if(box){
-    box.innerHTML = '<div class="card"><h1>تعذر فتح السجل</h1><p class="err">'+ String(err && err.message || err) +'</p><p style="margin-top:12px">استبدل ملف periods.html الحالي بهذه النسخة المصححة فقط.</p></div>';
+    box.innerHTML =
+      '<div class="card"><h1>تعذر فتح السجل</h1><p class="err">' +
+      String(err && err.message || err) +
+      '</p><p style="margin-top:12px">السجل الأصلي index.html لم يتغير.</p></div>';
   }
 });
 </script>
