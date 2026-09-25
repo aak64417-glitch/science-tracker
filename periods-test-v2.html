@@ -38,7 +38,7 @@ try{
   }
 }catch(e){}
 
-var res = await fetch("./index.html?periods-test-core=20260925c", {cache:"no-store"});
+var res = await fetch("./index.html?periods-test-core=20260925d", {cache:"no-store"});
 if(!res.ok) throw new Error("تعذر تحميل السجل الأصلي.");
 var app = await res.text();
 
@@ -216,6 +216,69 @@ replaceOnce(
       students[i].exams = filledBlankArray(MAX_EXAM_COLS);
     }`,
   "مسح درجات الفترة"
+);
+
+
+/* 4.5) تصدير Excel مرتبط صراحة بالفترة النشطة */
+replaceRegex(
+/\/\* ============ تصدير Excel ============ \*\/[\s\S]*?\/\* ============ الطباعة في صفحة A4 أفقية واحدة بدون تدوير ============ \*\//,
+`/* ============ تصدير Excel ============ */
+document.getElementById("exportExcelBtn").onclick=function(){
+  var cls = state.classes[currentClass], c=cfg();
+  var periodLabel = ACTIVE_PERIOD==="2" ? "الفترة الثانية" : "الفترة الأولى";
+  var periodFile = ACTIVE_PERIOD==="2" ? "الفترة_الثانية" : "الفترة_الأولى";
+  var headers = ["الرقم","اسم الطالب"];
+  for(var i=1;i<=c.participation;i++) headers.push("مشاركة "+i);
+  headers.push("مجموع المشاركة /10");
+  for(var i=1;i<=c.homework;i++) headers.push("واجب "+i);
+  headers.push("مجموع الواجبات /10");
+  for(var i=1;i<=c.tasks;i++) headers.push("مهمة "+i);
+  headers.push("مجموع المهام /20");
+  for(var i=1;i<=c.exams;i++) headers.push("اختبار "+i+" /20");
+  headers.push("درجة الفترة /20","المجموع الكلي /60");
+
+  var rows = "<tr>"+headers.map(function(h){return "<th>"+h+"</th>";}).join("")+"</tr>";
+  cls.students.forEach(function(s, idx){
+    if(!s.name || s.name.trim()==="") return;
+
+    var ps = (s.periods && s.periods[ACTIVE_PERIOD]) ? s.periods[ACTIVE_PERIOD] : {
+      p:s.p||[], h:s.h||[], t:s.t||[], exams:s.exams||[]
+    };
+
+    var pSum=participationScore(s), hSum=homeworkScore(s), tSum=taskScore(s), eMax=examScore(s), total=studentTotal(s);
+    var cells=[idx+1, escapeHTML(s.name)];
+
+    function excelVal(v){ return (v===null || v===undefined || v==="") ? "" : v; }
+
+    for(var i=0;i<c.participation;i++) cells.push(excelVal(ps.p[i]));
+    cells.push(fmtScore(pSum));
+    for(var i=0;i<c.homework;i++) cells.push(excelVal(ps.h[i]));
+    cells.push(fmtScore(hSum));
+    for(var i=0;i<c.tasks;i++) cells.push(excelVal(ps.t[i]));
+    cells.push(fmtScore(tSum));
+    for(var i=0;i<c.exams;i++) cells.push(excelVal(ps.exams[i]));
+    cells.push(fmtScore(eMax),fmtScore(total));
+
+    rows += "<tr>"+cells.map(function(v){return "<td>"+v+"</td>";}).join("")+"</tr>";
+  });
+
+  var title = "سجل "+fullClassDisplay(currentClass)+" - "+periodLabel+" - "+(state.meta.semester||"")+" "+(state.meta.year||"");
+  var html = "<html dir='rtl'><head><meta charset='UTF-8'></head><body>"+
+    "<h3>"+title+"</h3><table border='1'>"+rows+"</table></body></html>";
+  var blob = new Blob(["\\ufeff"+html], {type:"application/vnd.ms-excel"});
+  var url = URL.createObjectURL(blob);
+  var a=document.createElement("a");
+  a.href=url;
+  a.download="سجل_"+gradeTabName().replace(/\\s/g,"_")+"_"+classDisplay(currentClass).replace("/","-")+"_"+periodFile+".xls";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1800);
+  showToastMsg("✓ تم تصدير Excel - "+periodLabel, false);
+};
+
+/* ============ الطباعة في صفحة A4 أفقية واحدة بدون تدوير ============ */`,
+  "تصدير Excel للفترة"
 );
 
 /* 5) إبقاء محدد الفترة متزامنًا مع الواجهة */
