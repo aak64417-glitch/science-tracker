@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>إصلاح بيانات سجل العلوم</title>
+<style>
+body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#0b1526;color:#fff;display:grid;place-items:center;min-height:100vh;padding:20px}
+.card{max-width:680px;width:100%;background:#14223a;border:1px solid #344866;border-radius:18px;padding:24px;box-sizing:border-box;text-align:center;box-shadow:0 18px 50px #0006}
+h1{color:#f2c14e;margin-top:0}p{line-height:1.9;font-size:18px}.ok{color:#9ff0b8}.warn{color:#ffd59b}.bad{color:#ffb4b4}
+button{border:0;border-radius:12px;padding:14px 20px;font-size:18px;font-weight:700;cursor:pointer;background:#1c8a52;color:#fff}
+.small{font-size:14px;color:#c8d2e2}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>إصلاح بيانات سجل العلوم</h1>
+<div id="msg"><p>جاري فحص البيانات بأمان...</p></div>
+</div>
+<script>
+(function(){
+"use strict";
+var ORIGINAL_KEY="st_track_v1";
+var TEST_KEY="st_track_v1_periods_test_v2";
+
+function countNames(raw){
+  if(!raw) return 0;
+  try{
+    var obj=JSON.parse(raw), n=0;
+    var grades=obj && obj.grades ? obj.grades : {};
+    Object.keys(grades).forEach(function(g){
+      Object.keys(grades[g]||{}).forEach(function(sem){
+        Object.keys(grades[g][sem]||{}).forEach(function(cls){
+          var students=((grades[g][sem][cls]||{}).students)||[];
+          students.forEach(function(st){
+            if(st && String(st.name||"").trim()) n++;
+          });
+        });
+      });
+    });
+    return n;
+  }catch(e){ return 0; }
+}
+
+function show(html){ document.getElementById("msg").innerHTML=html; }
+
+try{
+  var originalRaw=localStorage.getItem(ORIGINAL_KEY);
+  var testRaw=localStorage.getItem(TEST_KEY);
+  var originalNames=countNames(originalRaw);
+  var testNames=countNames(testRaw);
+
+  if(!originalRaw || originalNames===0){
+    show('<p class="bad">لم أجد بيانات أصلية صالحة في هذا المتصفح.</p><p>لم يتم تغيير أي شيء.</p>');
+    return;
+  }
+
+  if(testNames===0){
+    if(testRaw){
+      try{
+        localStorage.setItem(TEST_KEY+"_before_repair_"+Date.now(), testRaw);
+      }catch(e){}
+    }
+    localStorage.setItem(TEST_KEY, originalRaw);
+    show('<p class="ok">✓ تم استعادة الأسماء والدرجات إلى النسخة الرئيسية بأمان.</p>'+
+         '<p>تم العثور على '+originalNames+' اسمًا في البيانات الأصلية.</p>'+
+         '<p class="small">البيانات الأصلية لم تتغير، وتم الاحتفاظ بنسخة من المفتاح التجريبي السابق إن وُجد.</p>'+
+         '<p>سيتم فتح السجل الرئيسي الآن...</p>');
+    setTimeout(function(){ location.href="./?v=periods-repaired"; },1800);
+  }else{
+    show('<p class="ok">✓ النسخة الجديدة تحتوي بالفعل على بيانات.</p>'+
+         '<p>عدد الأسماء الحالية: '+testNames+'. لن يتم استبدالها.</p>'+
+         '<p>سيتم فتح السجل الرئيسي الآن...</p>');
+    setTimeout(function(){ location.href="./?v=periods-repaired"; },1800);
+  }
+}catch(err){
+  show('<p class="bad">تعذر تنفيذ الإصلاح.</p><p>'+String(err && err.message || err)+'</p><p>لم يتم تغيير البيانات الأصلية.</p>');
+}
+})();
+</script>
+</body>
+</html>
