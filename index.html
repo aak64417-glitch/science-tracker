@@ -594,7 +594,7 @@
 /* ============ إعداد البيانات الأساسية ============ */
 var STORAGE_KEY = "st_track_v1";
 var DATA_VERSION = 7;
-var APP_VERSION = "23.0-periods-roster";
+var APP_VERSION = "23.1-storage-safe";
 var TEST_MODE = false;
 var ACTIVE_PERIOD_KEY = "st_track_periods_active_v1";
 var ACTIVE_PERIOD = (function(){ try{return localStorage.getItem(ACTIVE_PERIOD_KEY)==="2"?"2":"1";}catch(e){return "1";} })();
@@ -982,13 +982,18 @@ function idbOpen(cb){
   req.onsuccess = function(e){ idbConn = e.target.result; cb(idbConn); };
   req.onerror = function(){ cb(null); };
 }
-function idbSet(key, value){
+function idbSet(key, value, cb){
   idbOpen(function(db){
-    if(!db) return;
+    if(!db){ if(cb) cb(false); return; }
+    var done=false;
+    function finish(ok){ if(done) return; done=true; if(cb) cb(!!ok); }
     try{
       var tx = db.transaction(IDB_STORE, "readwrite");
+      tx.oncomplete = function(){ finish(true); };
+      tx.onerror = function(){ finish(false); };
+      tx.onabort = function(){ finish(false); };
       tx.objectStore(IDB_STORE).put(value, key);
-    }catch(e){}
+    }catch(e){ finish(false); }
   });
 }
 function idbGet(key, cb){
@@ -1046,6 +1051,9 @@ function makeSafeSnapshot(force){
   rememberGoodPayload(payload);
 }
 function save(showToast, allowEmpty){
+  var now=Date.now();
+  if(!state.meta) state.meta=defaultMeta();
+  state.meta.storageUpdatedAt=now;
   var obj=persistedStateObject();
   var payload=JSON.stringify(obj);
   var stats=payloadStats(obj);
@@ -1061,12 +1069,23 @@ function save(showToast, allowEmpty){
     var check=localStorage.getItem(STORAGE_KEY);
     if(check!==payload){ localStorage.setItem(STORAGE_KEY,payload); check=localStorage.getItem(STORAGE_KEY); }
     localOk=(check===payload);
-    if(localOk){ localLoadValid=true; if(stats.names>0 || stats.scored>0){ rememberGoodPayload(payload); makeSafeSnapshot(false); } if(showToast!==false) showToastMsg("✓ تم الحفظ تلقائيًا",false); }
-    else showToastMsg("⚠️ تعذر التأكد من الحفظ المحلي - تم تشغيل النسخة الاحتياطية",true);
-  }catch(e){ showToastMsg("⚠️ تعذر الحفظ المحلي - ستتم محاولة النسخة الاحتياطية الداخلية",true); }
-  idbSet(STORAGE_KEY,payload);
+    if(localOk){
+      localLoadValid=true;
+      if(stats.names>0 || stats.scored>0){ rememberGoodPayload(payload); makeSafeSnapshot(false); }
+      if(showToast!==false) showToastMsg("✓ تم الحفظ تلقائيًا",false);
+    }
+  }catch(e){ localOk=false; }
+
+  idbSet(STORAGE_KEY,payload,function(idbOk){
+    if(idbOk){
+      if(stats.names>0 || stats.scored>0) rememberGoodPayload(payload);
+      if(!localOk && showToast!==false) showToastMsg("✓ تم الحفظ في المخزن الآمن",false);
+    }else if(!localOk){
+      showToastMsg("⚠️ تعذر الحفظ المحلي والاحتياطي - صدّر نسخة احتياطية الآن",true);
+    }
+  });
   if(stats.names>0 || stats.scored>0) cloudBackup(payload);
-  return localOk;
+  return localOk || !!window.indexedDB;
 }
 
 function showToastMsg(msg, warn){
@@ -1078,19 +1097,33 @@ function showToastMsg(msg, warn){
   saveTimer=setTimeout(function(){ t.className="toast"; }, 1400);
 }
 
-/* محاولة الاسترجاع من IndexedDB فقط عندما تكون LocalStorage مفقودة أو تالفة. */
+/* استرجاع ذكي من IndexedDB: نستخدم النسخة الأحدث. */
+function storedUpdatedAt(obj){
+  var n=parseInt(obj && obj.meta && obj.meta.storageUpdatedAt,10);
+  return isNaN(n)?0:n;
+}
 function tryRecoverFromIDB(){
-  if(localLoadValid) return;
   idbGet(STORAGE_KEY, function(backup){
     if(!backup) return;
     try{
       var parsed = JSON.parse(backup);
       if(!parsed || (!parsed.classes && !parsed.semesters && !parsed.grades)) return;
+      var localParsed=null, localStamp=0;
+      try{
+        var localRaw=localStorage.getItem(STORAGE_KEY);
+        if(localRaw){ localParsed=JSON.parse(localRaw); localStamp=storedUpdatedAt(localParsed); }
+      }catch(e){ localParsed=null; localStamp=0; }
+      var backupStamp=storedUpdatedAt(parsed);
+      var useBackup = !localLoadValid || !localParsed || backupStamp>localStamp;
+      if(!useBackup) return;
       state = normalizeState(parsed);
       localLoadValid = true;
-      save(false);
+      try{
+        localStorage.setItem(STORAGE_KEY,backup);
+        localLoadValid=(localStorage.getItem(STORAGE_KEY)===backup);
+      }catch(e){ localLoadValid=false; }
       renderAll();
-      showToastMsg("✓ تم استرجاع البيانات تلقائيًا من النسخة الاحتياطية الداخلية", false);
+      showToastMsg("✓ تم استرجاع أحدث نسخة محفوظة تلقائيًا", false);
     }catch(e){
       console.error("تعذر قراءة النسخة الاحتياطية الداخلية", e);
     }

@@ -1,4 +1,4 @@
-const CACHE_NAME = "science-tracker-v21";
+const CACHE_NAME = "science-tracker-v23-1-storage-safe";
 const ASSETS = [
   "./",
   "./index.html",
