@@ -322,7 +322,7 @@
 
 <div class="stats-wrap" id="statsWrap"></div>
 <div class="chart-wrap">
-  <h3>توزيع درجات الطلاب (المجموع الكلي /60)</h3>
+  <h3>توزيع درجات الطلاب (المجموع الكلي /40)</h3>
   <canvas id="chartCanvas" width="900" height="180" style="width:100%;height:180px;"></canvas>
 </div>
 
@@ -337,7 +337,7 @@
         <th id="headHwGroup" colspan="11" class="grp-hw">الواجبات – 10 درجات</th>
         <th id="headTaskGroup" colspan="5" class="grp-perf">المهام الأدائية – 4 مهام – 20 درجة</th>
         <th id="headExamGroup" colspan="3" class="grp-test">اختبار الفترة – 2 اختبار – 20 درجة</th>
-        <th rowspan="2" class="grp-total">المجموع الكلي /60</th>
+        <th rowspan="2" class="grp-total">المجموع الكلي /40</th>
       </tr>
       <tr id="subHeaderRow"></tr>
     </thead>
@@ -412,7 +412,7 @@
   <div class="modal-box">
     <h3>↔️ تقليل أو زيادة خانات التقييم</h3>
     <div class="config-note">
-      الدرجة النهائية تبقى ثابتة دائمًا: <b>المشاركة /10</b>، <b>الواجبات /10</b>، <b>المهام /20</b>، <b>الاختبارات /20</b>.
+      مجموع أعمال السنة /40 (والاختبار مستقل /20): <b>المشاركة /10</b>، <b>الواجبات /10</b>، <b>المهام /20</b>؛ <b>الاختبارات /20 مستقلة</b>.
       عند تغيير عدد الخانات يُعاد وزن مجموع القسم تلقائيًا، ولا تُحذف درجات الخانات المخفية؛ فإذا زدت العدد لاحقًا ستظهر بياناتها من جديد.
     </div>
     <div class="column-config-grid">
@@ -484,7 +484,7 @@
       </div>
     </div>
 
-    <div class="analysis-note">يعتمد التصنيف على <b>المجموع /60</b>: ممتاز 54–60، جيد جدًا 48–أقل من 54، جيد 42–أقل من 48، مقبول 30–أقل من 42، ضعيف أقل من 30. الطالب الذي لم تُرصد له أي درجة يظهر ضمن «غير مرصود» ولا يدخل في المتوسطات.</div>
+    <div class="analysis-note">يعتمد التصنيف على <b>المجموع /40</b>: ممتاز 36–40، جيد جدًا 32–أقل من 36، جيد 28–أقل من 32، مقبول 20–أقل من 28، ضعيف أقل من 20. الطالب الذي لم تُرصد له أي درجة يظهر ضمن «غير مرصود» ولا يدخل في المتوسطات.</div>
     <div class="analysis-cards" id="analysisCards"></div>
 
     <div class="analysis-grid">
@@ -509,7 +509,7 @@
         <h3 style="margin:0;">تفاصيل الطلاب حسب المستوى</h3>
         <span id="analysisFilteredCount" style="font-size:12px;color:#64748b;font-weight:800;"></span>
       </div>
-      <div class="analysis-table-wrap"><table class="analysis-table"><thead><tr><th>م</th><th>اسم الطالب</th><th>الفصل</th><th>المشاركة /10</th><th>الواجبات /10</th><th>المهام /20</th><th>الاختبارات /20</th><th>المجموع /60</th><th>المستوى</th></tr></thead><tbody id="analysisStudentsBody"></tbody></table></div>
+      <div class="analysis-table-wrap"><table class="analysis-table"><thead><tr><th>م</th><th>اسم الطالب</th><th>الفصل</th><th>المشاركة /10</th><th>الواجبات /10</th><th>المهام /20</th><th>الاختبارات /20</th><th>المجموع /40</th><th>المستوى</th></tr></thead><tbody id="analysisStudentsBody"></tbody></table></div>
     </div>
 
     <div class="analysis-footer-actions">
@@ -1044,7 +1044,7 @@ function rememberGoodPayload(payload){
 function makeSafeSnapshot(force){
   var payload=JSON.stringify(persistedStateObject()), st=payloadStats(JSON.parse(payload));
   if(st.names===0 && st.scored===0) return;
-  var now=Date.now(); if(!force && now-lastSnapshotAt<300000) return;
+  var now=Date.now(); if(!force && now-lastSnapshotAt<200000) return;
   lastSnapshotAt=now;
   var key=SNAPSHOT_PREFIX+now;
   idbSet(key,payload);
@@ -1156,7 +1156,7 @@ function examScore(s){
   for(var i=0;i<c.exams;i++) max=Math.max(max,num(s.exams[i]));
   return Math.min(20,max);
 }
-function studentTotal(s){ var v=participationScore(s)+homeworkScore(s)+taskScore(s)+examScore(s); return Math.round((v+Number.EPSILON)*100)/100; }
+function studentTotal(s){ var v=participationScore(s)+homeworkScore(s)+taskScore(s); return Math.round((v+Number.EPSILON)*100)/100; }
 function fieldMax(kind){
   if(kind==="p"||kind==="h") return 1;
   if(kind==="t") return 5;
@@ -1242,7 +1242,7 @@ function buildTableBody(){
   var html = "";
   cls.students.forEach(function(s, idx){
     var pSum=participationScore(s), hSum=homeworkScore(s), tSum=taskScore(s), eMax=examScore(s);
-    var total=pSum+hSum+tSum+eMax;
+    var total=pSum+hSum+tSum;
     html += '<tr data-row="'+idx+'">';
     html += '<td class="sticky-col"><input type="checkbox" class="row-check" data-idx="'+idx+'" '+(selectedRows[idx]?"checked":"")+'></td>';
     html += '<td class="sticky-col rownum">'+(idx+1)+'</td>';
@@ -1359,7 +1359,7 @@ function handleScoreInput(inputEl){
 
 function refreshRowCalculations(idx, s){
   var pSum=participationScore(s), hSum=homeworkScore(s), tSum=taskScore(s), eMax=examScore(s);
-  var total=pSum+hSum+tSum+eMax;
+  var total=pSum+hSum+tSum;
   setCellHTML("sum-p-"+idx, "<b>"+fmtScore(pSum)+"</b>");
   setCellHTML("sum-h-"+idx, "<b>"+fmtScore(hSum)+"</b>");
   setCellHTML("sum-t-"+idx, "<b>"+fmtScore(tSum)+"</b>");
@@ -1628,18 +1628,18 @@ function updateStats(){
   var avg = totals.length? (totals.reduce(function(a,b){return a+b;},0)/totals.length) : 0;
   var max = totals.length? Math.max.apply(null, totals):0;
   var min = totals.length? Math.min.apply(null, totals):0;
-  var passCount = totals.filter(function(t){ return t>=50; }).length;
-  var lowCount = totals.filter(function(t){ return t<30; }).length;
+  var passCount = totals.filter(function(t){ return t>=32; }).length;
+  var lowCount = totals.filter(function(t){ return t<20; }).length;
 
   var wrap = document.getElementById("statsWrap");
   wrap.innerHTML =
     statCard(count,"إجمالي المقاعد")+
     statCard(namedCount,"طلاب مُدخَلون")+
-    statCard(avg.toFixed(1),"متوسط الفصل /60")+
+    statCard(avg.toFixed(1),"متوسط الفصل /40")+
     statCard(max,"أعلى درجة")+
     statCard(min,"أقل درجة")+
-    statCard(passCount,"50 فأكثر")+
-    statCard(lowCount,"أقل من 30");
+    statCard(passCount,"32 فأكثر")+
+    statCard(lowCount,"أقل من 20");
 
   drawChart(totals);
 }
@@ -1653,15 +1653,15 @@ function drawChart(totals){
   var ctx = canvas.getContext("2d");
   var W = canvas.width, H = canvas.height;
   ctx.clearRect(0,0,W,H);
-  var buckets = [0,0,0,0,0,0];
+  var buckets = [0,0,0,0];
   totals.forEach(function(t){
-    var b = Math.min(5, Math.floor(t/10));
+    var b = Math.min(3, Math.floor(t/10));
     buckets[b]++;
   });
   var maxB = Math.max.apply(null, buckets.concat([1]));
-  var labels = ["0-9","10-19","20-29","30-39","40-49","50-60"];
+  var labels = ["0-9","10-19","20-29","30-40"];
   var barW = W/buckets.length;
-  var colors = ["#c62828","#ef6c00","#f9a825","#9e9d24","#2e7d32","#1565c0"];
+  var colors = ["#c62828","#ef6c00","#9e9d24","#2e7d32"];
   buckets.forEach(function(v,i){
     var barH = (v/maxB) * (H-40);
     var x = i*barW + barW*0.15;
@@ -1692,10 +1692,10 @@ function sectionHasScore(s,kind){
 function hasAnyRecordedScore(s){ return sectionHasScore(s,"p")||sectionHasScore(s,"h")||sectionHasScore(s,"t")||sectionHasScore(s,"e"); }
 function levelInfo(total){
   total=num(total);
-  if(total>=54) return {label:"ممتاز",key:"excellent",cls:"excellent"};
-  if(total>=48) return {label:"جيد جدًا",key:"vgood",cls:"vgood"};
-  if(total>=42) return {label:"جيد",key:"good",cls:"good"};
-  if(total>=30) return {label:"مقبول",key:"acceptable",cls:"acceptable"};
+  if(total>=36) return {label:"ممتاز",key:"excellent",cls:"excellent"};
+  if(total>=32) return {label:"جيد جدًا",key:"vgood",cls:"vgood"};
+  if(total>=28) return {label:"جيد",key:"good",cls:"good"};
+  if(total>=20) return {label:"مقبول",key:"acceptable",cls:"acceptable"};
   return {label:"ضعيف",key:"weak",cls:"weak"};
 }
 function avgOf(arr){ return arr.length?arr.reduce(function(a,b){return a+b;},0)/arr.length:0; }
@@ -1737,13 +1737,13 @@ function computeAnalysis(scope){
   if(scope==="all"){
     CLASSES.forEach(function(k){
       var rr=records.filter(function(r){return r.classKey===k;}), ss=rr.filter(function(r){return r.recorded;}), tt=ss.map(function(r){return r.total;});
-      classStats.push({key:k,label:classDisplay(k),named:rr.length,scored:ss.length,avg:avgOf(tt),mastery:ss.filter(function(r){return r.total>=48;}).length});
+      classStats.push({key:k,label:classDisplay(k),named:rr.length,scored:ss.length,avg:avgOf(tt),mastery:ss.filter(function(r){return r.total>=32;}).length});
     });
   }
   var sorted=scored.slice().sort(function(a,b){return b.total-a.total;});
   var data={scope:scope,records:records,scored:scored,levels:levels,sections:sections,classStats:classStats,
     avg:avgOf(totals),max:totals.length?Math.max.apply(null,totals):0,min:totals.length?Math.min.apply(null,totals):0,
-    mastery:scored.filter(function(r){return r.total>=48;}).length,weak:scored.filter(function(r){return r.total<30;}).length,
+    mastery:scored.filter(function(r){return r.total>=32;}).length,weak:scored.filter(function(r){return r.total<20;}).length,
     top:sorted.slice(0,5),bottom:sorted.slice().reverse().slice(0,5)};
   return data;
 }
@@ -1753,9 +1753,9 @@ function renderAnalysisCards(data){
   document.getElementById("analysisCards").innerHTML=
     analysisCard(data.records.length,"الطلاب المسجلون","info")+
     analysisCard(data.scored.length,"لديهم درجات","info")+
-    analysisCard(data.avg.toFixed(1),"متوسط الأداء /60",data.avg>=48?"good":data.avg<30?"bad":"warn")+
+    analysisCard(data.avg.toFixed(1),"متوسط الأداء /40",data.avg>=32?"good":data.avg<20?"bad":"warn")+
     analysisCard(data.max?fmtScore(data.max):"—","أعلى درجة","good")+
-    analysisCard(masteryPct+"%","نسبة الإتقان (48 فأكثر)",masteryPct>=80?"good":masteryPct<50?"bad":"warn")+
+    analysisCard(masteryPct+"%","نسبة الإتقان (32 فأكثر)",masteryPct>=80?"good":masteryPct<50?"bad":"warn")+
     analysisCard(unscored,"غير مرصود لهم",unscored?"warn":"good");
 }
 function renderLevelGrid(data){
@@ -1779,13 +1779,13 @@ function drawAnalysisSections(data){
 function drawAnalysisTop(data){
   var o=setupCanvas(document.getElementById("analysisTopCanvas")),ctx=o.ctx,W=o.W,H=o.H,top=data.top,left=255,right=60,rowH=43,barMax=W-left-right;
   if(!top.length){ctx.fillStyle="#64748b";ctx.textAlign="center";ctx.font="16px Tahoma";ctx.fillText("لا توجد درجات مرصودة بعد",W/2,H/2);return;}
-  top.forEach(function(r,i){var y=20+i*rowH;ctx.fillStyle="#e2e8f0";ctx.fillRect(left,y+5,barMax,20);ctx.fillStyle="#0f766e";ctx.fillRect(left,y+5,barMax*(r.total/60),20);ctx.fillStyle="#0f172a";ctx.font="bold 13px Tahoma";ctx.textAlign="right";ctx.fillText((i+1)+". "+shortText(r.name,24),left-12,y+20);ctx.textAlign="left";ctx.fillText(fmtScore(r.total),left+barMax+10,y+20);});
+  top.forEach(function(r,i){var y=20+i*rowH;ctx.fillStyle="#e2e8f0";ctx.fillRect(left,y+5,barMax,20);ctx.fillStyle="#0f766e";ctx.fillRect(left,y+5,barMax*(r.total/40),20);ctx.fillStyle="#0f172a";ctx.font="bold 13px Tahoma";ctx.textAlign="right";ctx.fillText((i+1)+". "+shortText(r.name,24),left-12,y+20);ctx.textAlign="left";ctx.fillText(fmtScore(r.total),left+barMax+10,y+20);});
 }
 function renderClassCompare(data){
   var panel=document.getElementById("classComparePanel"),grid=document.getElementById("classCompareGrid");
   if(data.scope!=="all"){panel.style.display="none";grid.innerHTML="";return;}
   panel.style.display="block";
-  grid.innerHTML=data.classStats.map(function(c){return '<div class="class-chip"><b>'+escapeHTML(c.label)+'</b><span>طلاب: '+c.named+' | مرصود: '+c.scored+'</span><span>المتوسط: '+c.avg.toFixed(1)+'/60</span><span>الإتقان: '+pct(c.mastery,c.scored)+'%</span></div>';}).join("");
+  grid.innerHTML=data.classStats.map(function(c){return '<div class="class-chip"><b>'+escapeHTML(c.label)+'</b><span>طلاب: '+c.named+' | مرصود: '+c.scored+'</span><span>المتوسط: '+c.avg.toFixed(1)+'/40</span><span>الإتقان: '+pct(c.mastery,c.scored)+'%</span></div>';}).join("");
 }
 function analysisInsights(data){
   if(!data.records.length) return [{title:"لا توجد أسماء",text:"أضف أسماء الطلاب أولًا ثم أدخل الدرجات ليظهر التحليل."}];
@@ -1795,7 +1795,7 @@ function analysisInsights(data){
   var out=[];
   if(secs.length){out.push({title:"نقطة القوة",text:"أعلى متوسط نسبي في "+secs[0].n+" بنسبة "+secs[0].m.pct+"% من الدرجة المتاحة."});out.push({title:"أولوية التحسين",text:"أقل متوسط نسبي في "+secs[secs.length-1].n+" بنسبة "+secs[secs.length-1].m.pct+"%. يُنصح بتكثيف المتابعة والتدريب في هذا الجانب."});}
   var masteryPct=pct(data.mastery,data.scored.length);
-  out.push({title:"مستوى الإتقان",text:"حقق "+data.mastery+" من أصل "+data.scored.length+" طالبًا مرصودًا مستوى 48/60 فأعلى، بنسبة "+masteryPct+"%."});
+  out.push({title:"مستوى الإتقان",text:"حقق "+data.mastery+" من أصل "+data.scored.length+" طالبًا مرصودًا مستوى 32/40 فأعلى، بنسبة "+masteryPct+"%."});
   if(data.weak>0) out.push({title:"خطة علاجية",text:"يوجد "+data.weak+" طالب/طلاب في المستوى الضعيف. يُقترح تحديد المهارات الأقل أداءً، تدريب قصير متكرر، ثم إعادة قياس بعد كل نشاط علاجي."});
   else out.push({title:"المتعثرون",text:"لا يوجد حاليًا طلاب في المستوى الضعيف وفق الدرجات المرصودة."});
   var unscored=data.records.length-data.scored.length;
@@ -1823,7 +1823,7 @@ function openAnalysis(){document.getElementById("analysisModal").classList.add("
 function csvCell(v){v=String(v===null||v===undefined?"":v);return '"'+v.replace(/"/g,'""')+'"';}
 function exportAnalysis(){
   var data=lastAnalysisData||computeAnalysis(document.getElementById("analysisScope").value||"current");
-  var rows=[["م","اسم الطالب","الفصل","المشاركة /10","الواجبات /10","المهام /20","الاختبارات /20","المجموع /60","المستوى"]];
+  var rows=[["م","اسم الطالب","الفصل","المشاركة /10","الواجبات /10","المهام /20","الاختبارات /20","المجموع /40","المستوى"]];
   data.records.forEach(function(r,i){rows.push([i+1,r.name,r.classLabel,r.pRecorded?fmtScore(r.p):"",r.hRecorded?fmtScore(r.h):"",r.tRecorded?fmtScore(r.t):"",r.eRecorded?fmtScore(r.e):"",r.recorded?fmtScore(r.total):"",r.level.label]);});
   rows.push([]);rows.push(["ملخص","عدد الطلاب",data.records.length,"المرصود",data.scored.length,"المتوسط",data.avg.toFixed(1),"الإتقان %",pct(data.mastery,data.scored.length)]);
   var csv=rows.map(function(r){return r.map(csvCell).join(",");}).join("\r\n"),blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");
@@ -1866,7 +1866,7 @@ function createAnalysisReportCanvas(data){
 
   var unscored=data.records.length-data.scored.length, masteryPct=pct(data.mastery,data.scored.length), statY=495, statW=235, statH=110, statGap=18;
   var stats=[
-    [data.records.length,"عدد الطلاب","#0f766e"],[data.scored.length,"مرصود لهم درجات","#0369a1"],[data.avg.toFixed(1),"متوسط الأداء /60",data.avg>=48?"#15803d":data.avg<30?"#b91c1c":"#d97706"],
+    [data.records.length,"عدد الطلاب","#0f766e"],[data.scored.length,"مرصود لهم درجات","#0369a1"],[data.avg.toFixed(1),"متوسط الأداء /40",data.avg>=32?"#15803d":data.avg<20?"#b91c1c":"#d97706"],
     [data.max?fmtScore(data.max):"—","أعلى درجة","#15803d"],[masteryPct+"%","نسبة الإتقان","#7c3aed"],[unscored,"غير مرصود لهم",unscored?"#b45309":"#15803d"]
   ];
   stats.forEach(function(s,i){var x=60+i*(statW+statGap);drawStatCard(ctx,x,statY,statW,statH,s[0],s[1],s[2]);});
@@ -1885,7 +1885,7 @@ function createAnalysisReportCanvas(data){
 
   (function(){var insights=analysisInsights(data);var bx=85, by=1245, bw=650, yy=by;insights.forEach(function(ins,idx){fillRoundRect(ctx,bx,yy,bw,112,18,idx%2?"#f8fafc":"#fefbf5","#e2e8f0");ctx.fillStyle="#0f3557";ctx.font="bold 21px Tahoma";ctx.textAlign="right";ctx.fillText((idx+1)+". "+ins.title,bx+bw-18,yy+24);yy=drawWrappedCanvasText(ctx,ins.text,bx+bw-18,yy+46,bw-36,24,"#334155","18px Tahoma","right")+20;});})();
 
-  (function(){var x=865,y=1245,w=650,rowH=56;var cols=[55,275,110,100,110];var xs=[x+w];for(var i=0;i<cols.length;i++) xs.push(xs[i]-cols[i]); var headers=["م","اسم الطالب","الفصل","المجموع","المستوى"]; for(var c=0;c<cols.length;c++){ctx.fillStyle="#17324d";ctx.fillRect(xs[c+1],y,cols[c],44);ctx.fillStyle="#fff";ctx.font="bold 18px Tahoma";ctx.textAlign="center";ctx.fillText(headers[c],xs[c+1]+cols[c]/2,y+27);} var rows=data.top.length?data.top:[{name:"لا توجد درجات مرصودة بعد",classLabel:"—",total:"—",level:{label:"—"}}]; rows.slice(0,5).forEach(function(r,ri){var yy=y+44+ri*rowH; var fill=ri%2?"#f8fafc":"#ffffff"; for(var ci=0;ci<cols.length;ci++){ctx.fillStyle=fill;ctx.fillRect(xs[ci+1],yy,cols[ci],rowH);ctx.strokeStyle="#e2e8f0";ctx.strokeRect(xs[ci+1],yy,cols[ci],rowH); ctx.fillStyle="#0f172a"; ctx.font=(ci===1?"bold 17px Tahoma":"16px Tahoma"); ctx.textAlign="center"; var val=[ri+1,r.name||"",r.classLabel||"",r.total==="—"?"—":fmtScore(r.total),r.level&&r.level.label?r.level.label:"—"][ci]; if(ci===1){ctx.textAlign="right";ctx.fillText(fitCanvasText(ctx,String(val),cols[ci]-18,17,12,ci===1),xs[ci+1]+cols[ci]-10,yy+34);} else {ctx.fillText(String(val),xs[ci+1]+cols[ci]/2,yy+34);} }}); ctx.fillStyle="#64748b"; ctx.font="14px Tahoma"; ctx.textAlign="right"; ctx.fillText("يعرض التقرير أعلى خمسة طلاب حسب مجموع /60",x+w-4, y+44+Math.max(1,rows.slice(0,5).length)*rowH+28);})();
+  (function(){var x=865,y=1245,w=650,rowH=56;var cols=[55,275,110,100,110];var xs=[x+w];for(var i=0;i<cols.length;i++) xs.push(xs[i]-cols[i]); var headers=["م","اسم الطالب","الفصل","المجموع","المستوى"]; for(var c=0;c<cols.length;c++){ctx.fillStyle="#17324d";ctx.fillRect(xs[c+1],y,cols[c],44);ctx.fillStyle="#fff";ctx.font="bold 18px Tahoma";ctx.textAlign="center";ctx.fillText(headers[c],xs[c+1]+cols[c]/2,y+27);} var rows=data.top.length?data.top:[{name:"لا توجد درجات مرصودة بعد",classLabel:"—",total:"—",level:{label:"—"}}]; rows.slice(0,5).forEach(function(r,ri){var yy=y+44+ri*rowH; var fill=ri%2?"#f8fafc":"#ffffff"; for(var ci=0;ci<cols.length;ci++){ctx.fillStyle=fill;ctx.fillRect(xs[ci+1],yy,cols[ci],rowH);ctx.strokeStyle="#e2e8f0";ctx.strokeRect(xs[ci+1],yy,cols[ci],rowH); ctx.fillStyle="#0f172a"; ctx.font=(ci===1?"bold 17px Tahoma":"16px Tahoma"); ctx.textAlign="center"; var val=[ri+1,r.name||"",r.classLabel||"",r.total==="—"?"—":fmtScore(r.total),r.level&&r.level.label?r.level.label:"—"][ci]; if(ci===1){ctx.textAlign="right";ctx.fillText(fitCanvasText(ctx,String(val),cols[ci]-18,17,12,ci===1),xs[ci+1]+cols[ci]-10,yy+34);} else {ctx.fillText(String(val),xs[ci+1]+cols[ci]/2,yy+34);} }}); ctx.fillStyle="#64748b"; ctx.font="14px Tahoma"; ctx.textAlign="right"; ctx.fillText("يعرض التقرير أعلى خمسة طلاب حسب مجموع /40",x+w-4, y+44+Math.max(1,rows.slice(0,5).length)*rowH+28);})();
 
   fillRoundRect(ctx,60,1805,1480,365,24,"#ffffff","#dbe5ee");
   ctx.fillStyle="#17324d"; ctx.font="bold 24px Tahoma"; ctx.textAlign="right"; ctx.fillText("خلاصة التقرير",1510,1844);
@@ -2283,7 +2283,7 @@ document.getElementById("exportExcelBtn").onclick=function(){
   for(var i=1;i<=c.tasks;i++) headers.push("مهمة "+i);
   headers.push("مجموع المهام /20");
   for(var i=1;i<=c.exams;i++) headers.push("اختبار "+i+" /20");
-  headers.push("درجة الفترة /20","المجموع الكلي /60");
+  headers.push("درجة الفترة /20","المجموع الكلي /40");
   var rows = "<tr>"+headers.map(function(h){return "<th>"+h+"</th>";}).join("")+"</tr>";
   cls.students.forEach(function(s, idx){
     if(!s.name || s.name.trim()==="") return;
@@ -2421,7 +2421,7 @@ function buildLandscapeCanvasPage(chunk,startIndex,pageIndex,pageCount,c){
   for(var i=0;i<c.exams;i++) cols.push({key:"e",idx:i,label:String(i+1),weight:1.22,bg:colors.testBg});
   cols.push({key:"eSum",label:"فترة /20",weight:1.55,bg:colors.testBg});
   var eEnd=cols.length-1;
-  cols.push({key:"total",label:"المجموع /60",weight:1.65,bg:colors.totalBg});
+  cols.push({key:"total",label:"المجموع /40",weight:1.65,bg:colors.totalBg});
 
   var totalWeight=cols.reduce(function(a,b){return a+b.weight;},0);
   var xRight=margin+tableW;
@@ -2435,7 +2435,7 @@ function buildLandscapeCanvasPage(chunk,startIndex,pageIndex,pageCount,c){
   drawCanvasCell(ctx,cols[0].x,tableY,cols[0].w,headerH*2,"م",colors.base,"#222",headFont,true,"center");
   drawCanvasCell(ctx,cols[1].x,tableY,cols[1].w,headerH*2,"اسم الطالب",colors.base,"#222",headFont,true,"center");
   var last=cols[cols.length-1];
-  drawCanvasCell(ctx,last.x,tableY,last.w,headerH*2,"المجموع /60",colors.total,"#fff",headFont,true,"center");
+  drawCanvasCell(ctx,last.x,tableY,last.w,headerH*2,"المجموع /40",colors.total,"#fff",headFont,true,"center");
 
   function drawGroup(start,end,label,bg){
     var left=cols[end].x, right=cols[start].x+cols[start].w;
